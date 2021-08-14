@@ -9,3 +9,9 @@ export function jsonp(src) {
   document.body.appendChild(s);
   document.getElementById(s.id).remove();
 }
+
+export function parse_CAS(names) {
+  const cas_regex = /^\d{1,7}-\d{1,2}-\d$/;
+  const filtered = names.filter((name) => cas_regex.test(name));
+  return filtered.length >= 1 ? filtered[0] : null;
+}

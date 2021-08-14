@@ -7,13 +7,17 @@ const settings = {
   colHeaders: [
     "Lock",
     "Type",
-    "Bezeichnung",
-    "Molekulargewicht",
-    "Stoffmenge",
-    "Masse",
-    "Volumen",
-    "Dichte",
+    "Search",
+    "Name",
+    "MW", //molecular weight, format: x g/mol
+    "Density",
+    "Amount", //Stoffmenge, format: x mol
+    "Mass",
+    "Volume",
+    "EQ", //Äquivalente / Equivalents
     "CAS",
+    "Notes",
+    "Link",
   ],
   columns: [
     {
@@ -21,9 +25,13 @@ const settings = {
     },
     {
       type: "dropdown",
-      source: ["Name", "InChI", "InChIKey", "PubChem CID", "SMILES", "Formula"],
+      source: ["CAS", "InChI", "InChIKey", "Name", "PubChem CID", "SMILES"],
       width: 150,
     },
+    {},
+    {},
+    {},
+    {},
     {},
     {},
     {},
@@ -43,6 +51,7 @@ const settings = {
 
 export default class Table {
   constructor() {
+    console.log("Hello Table");
     const table = document.getElementById("table");
     this.hot = new Handsontable(table, settings);
   }

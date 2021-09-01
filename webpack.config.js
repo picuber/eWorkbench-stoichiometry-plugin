@@ -46,7 +46,9 @@ var config = {
   devServer: {
     open: true,
     host: "localhost",
-    contentBase: path.resolve(__dirname, "dist"),
+    static: {
+      directory: path.resolve(__dirname, "dist"),
+    },
   },
   devtool: "source-map",
   optimization: {

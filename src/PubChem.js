@@ -1,40 +1,42 @@
-export default class PubChem {
-  // TODO
-  // return: listkey -> new call with compound/listkey/<listkey>/<output>
-  constructor() {
-    console.log("Hello PubChem");
-    this.prolog_rest = "https://pubchem.ncbi.nlm.nih.gov/rest/pug";
-    this.prolog_view = "https://pubchem.ncbi.nlm.nih.gov/rest/pug_view";
-    this.rl = new RateLimit(200); // 5 times every second in ms
-    this.parse = new Parser();
-  }
+function fetchPubChem(db, prolog, input, op, cb, cb_fail, query = null) {
+  const URL = prolog + input + op + "/JSON";
+  db.ratelimit.schedule(() =>
+    fetch(URL + (query === null ? "" : query))
+      .then((response) => response.json())
+      .then((json_data) => cb(json_data))
+      .catch((err) => cb_fail(err))
+  );
+}
 
-  get(prolog, input, op, callback, query = null) {
-    const URL = prolog + input + op + "/JSON";
-    this.rl.schedule(() =>
-      fetch(URL + (query === null ? "" : query))
-        .then((response) => response.json())
-        .then((json_data) => callback(json_data))
-    );
-  }
-
-  get_from_rest(input, cb, query = null) {
-    this.get(
-      this.prolog_rest,
-      "/compound" + input,
-      "/property/MolecularWeight,CanonicalSMILES,InChI,InChIKey",
-      (raw) => {
+function askPugREST(db, input, cb, cb_fail, query = null) {
+  fetchPubChem(
+    db,
+    db.prolog_rest,
+    "/compound" + input,
+    "/property/MolecularWeight,CanonicalSMILES,InChI,InChIKey",
+    (raw) => {
+      if ("PropertyTable" in raw) {
         const data = raw.PropertyTable.Properties[0];
-        this.get_from_view(data.CID, data, cb);
-      },
-      query
-    );
-  }
+        askPugView(db, data.CID, data, cb, cb_fail);
+      } else {
+        cb_fail(new Error("Compound could not be found"));
+      }
+    },
+    cb_fail,
+    query
+  );
+}
 
-  get_from_view(CID, data, cb) {
-    this.get(this.prolog_view, "/data/compound/" + CID, "", (raw) => {
-      data.name = raw.Record.RecordTitle;
-      data.link = "https://pubchem.ncbi.nlm.nih.gov/compound/" + data.CID;
+// assumes valid CID as input
+function askPugView(db, CID, data, cb, cb_fail) {
+  fetchPubChem(
+    db,
+    db.prolog_view,
+    "/data/compound/" + CID,
+    "",
+    (raw) => {
+      data.Name = raw.Record.RecordTitle;
+      data.Source = "https://pubchem.ncbi.nlm.nih.gov/compound/" + data.CID;
 
       data.CAS = raw.Record.Section.find(
         (elem) => elem.TOCHeading === "Names and Identifiers"
@@ -56,58 +58,47 @@ export default class PubChem {
       );
 
       cb(data);
-    });
+    },
+    cb_fail
+  );
+}
+
+export default class PubChem {
+  // TODO
+  // return: listkey -> new call with compound/listkey/<listkey>/<output>
+  constructor() {
+    console.log("Hello PubChem");
+    this.prolog_rest = "https://pubchem.ncbi.nlm.nih.gov/rest/pug";
+    this.prolog_view = "https://pubchem.ncbi.nlm.nih.gov/rest/pug_view";
+    this.ratelimit = new RateLimit(200); // 5 times every second in ms
+    this.parse = new Parser();
   }
 
-  byCAS(CAS, cb) {
-    this.get_from_rest("/name/" + CAS, cb);
-  }
-  byInChI(InChI, cb) {
-    this.get_from_rest("/inchi", cb, "?inchi=" + InChI);
-  }
-  byInChIKey(InChIKey, cb) {
-    this.get_from_rest("/inchikey/" + InChIKey, cb);
-  }
-  byName(name, cb) {
-    this.get_from_rest("/name/" + name, cb);
-  }
-  byCID(CID, cb) {
-    this.get_from_rest("/cid/" + CID, cb);
-  }
-  bySMILES(SMILES, cb) {
-    this.get_from_rest("/smiles/" + encodeURIComponent(SMILES), cb);
-  }
-
-  by(type, value, cb) {
+  by(type, value, cb, cb_fail) {
     switch (type) {
       case "CAS":
-        this.byCAS(value, cb);
+        askPugREST(this, "/name/" + value, cb, cb_fail);
         break;
       case "InChI":
-        this.byInChI(value, cb);
+        askPugREST(this, "/inchi", cb, cb_fail, "?inchi=" + value);
         break;
       case "InChIKey":
-        this.byInChIKey(value, cb);
+        askPugREST(this, "/inchikey/" + value, cb, cb_fail);
         break;
       case "Name":
-        this.byName(value, cb);
+        askPugREST(this, "/name/" + value, cb, cb_fail);
         break;
       case "CID":
-        this.byCID(value, cb);
+        askPugREST(this, "/cid/" + value, cb, cb_fail);
         break;
       case "SMILES":
-        this.bySMILES(value, cb);
+        askPugREST(this, "/smiles/" + encodeURIComponent(value), cb, cb_fail);
         break;
     }
   }
 
-  by_auto_parse(value, cb) {
-    if (this.parse.isCAS(value)) this.byCAS(value, cb);
-    else if (this.parse.isInChI(value)) this.byInChI(value, cb);
-    else if (this.parse.isInChIKey(value)) this.byInChIKey(value, cb);
-    else if (this.parse.isCID(value)) this.byCID(value, cb);
-    else if (this.parse.isSMILES(value)) this.bySMILES(value, cb);
-    else this.byName(value, cb);
+  byAuto(value, cb, cb_fail) {
+    this.by(this.parse.auto(value), value, cb, cb_fail);
   }
 }
 
@@ -137,6 +128,15 @@ class Parser {
     const rest =
       "[bcnops]|[0-9]|TH|AL|SP|TB|OH|se|as|[+-=#$/:\\\\@\\[\\]\\(\\)%\\*]";
     return new RegExp("^(" + elements + "|" + rest + ")+$").test(input.trim());
+  }
+
+  auto(value) {
+    if (this.isCAS(value)) return "CAS";
+    else if (this.isInChI(value)) return "InChI";
+    else if (this.isInChIKey(value)) return "InChIKey";
+    else if (this.isCID(value)) return "CID";
+    else if (this.isSMILES(value)) return "SMILES";
+    else return "Name";
   }
 }
 

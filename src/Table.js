@@ -315,7 +315,7 @@ function addHooks(hot, db) {
           hot.setDataAtRowProp(
             row,
             col.Status.prop,
-            "\u{1F50D}Searching",
+            "\u{1F50D}Searching Compound",
             "searchFill"
           );
         };

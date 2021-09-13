@@ -1,3 +1,5 @@
+import Table from "./Table.js";
+
 // get params from location
 function parseLocation() {
   const params = location.href.split("?")[1].split("&");
@@ -21,8 +23,8 @@ function showTechInfo(auth) {
 }
 
 // load plugin details from backend (Called from onload)
-function loadPluginInstanceDetailsFromBackend(plugin) {
-  const url = plugin.apiBaseUrl + plugin.pk + "/?jwt=" + plugin.jwt;
+function loadPluginInstanceDetailsFromBackend(auth) {
+  const url = auth.apiBaseUrl + auth.pk + "/?jwt=" + auth.jwt;
   fetch(url)
     .then(function (response) {
       return response.json();
@@ -91,7 +93,7 @@ function sendForm(formData, auth) {
 }
 
 export default class Plugin {
-  constructor(table) {
+  constructor() {
     console.log("Hello Plugin");
     const locationData = parseLocation();
     this.auth = {
@@ -100,7 +102,7 @@ export default class Plugin {
       jwt: locationData.jwt,
     };
 
-    this.table = table;
+    this.table = new Table();
 
     showTechInfo(this.auth);
   }

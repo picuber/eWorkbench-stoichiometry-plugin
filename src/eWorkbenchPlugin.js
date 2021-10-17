@@ -45,7 +45,7 @@ function loadTableDataFromBackend(tableDataURL, table) {
     })
     .then(function (tableData) {
       if (tableData) {
-        table.load(JSON.parse(tableData));
+        table.loadData(JSON.parse(tableData));
       }
     });
 }

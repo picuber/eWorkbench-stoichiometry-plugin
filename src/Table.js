@@ -438,6 +438,10 @@ export default class Table {
     this.hot.selectCell(0, col.Search.prop);
   }
 
+  getData() {
+    return this.hot.getSourceData();
+  }
+
   loadData(tableData) {
     this.hot.loadData(tableData);
   }
@@ -446,14 +450,14 @@ export default class Table {
     return this.hot.getPlugin("exportFile").exportAsBlob("csv");
   }
 
-  exportImage() {
+  exportImage(callback) {
     this.hot.setDataAtRowProp(
       0,
       col.Notes.prop,
       this.hot.getDataAtRowProp(0, col.Notes.prop)
     );
-    html2canvas(document.getElementById("table"), {
+    return html2canvas(document.getElementById("table"), {
       width: document.getElementsByClassName("ht_clone_top")[0].clientWidth,
-    }).then((canvas) => document.body.appendChild(canvas));
+    }).then((canvas) => canvas.toBlob(callback));
   }
 }

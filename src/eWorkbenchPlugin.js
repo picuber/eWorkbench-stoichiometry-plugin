@@ -23,47 +23,31 @@ function showTechInfo(auth) {
 }
 
 // load plugin details from backend (Called from onload)
-function loadPluginInstanceDetailsFromBackend(auth) {
+function loadPluginInstanceDetailsFromBackend(auth, table) {
   const url = auth.apiBaseUrl + auth.pk + "/?jwt=" + auth.jwt;
   fetch(url)
     .then(function (response) {
       return response.json();
     })
     .then(function (pluginInstanceDetailJSON) {
-      loadTableDataFromBackend(pluginInstanceDetailJSON["download_rawdata"]);
+      loadTableDataFromBackend(
+        pluginInstanceDetailJSON["download_rawdata"],
+        table
+      );
     });
 }
 
 // load app details from backend
-function loadTableDataFromBackend(tableDataURL) {
+function loadTableDataFromBackend(tableDataURL, table) {
   fetch(tableDataURL)
     .then(function (response) {
       return response.text();
     })
     .then(function (tableData) {
       if (tableData) {
-        //TODO
+        table.load(JSON.parse(tableData));
       }
     });
-}
-
-function dataURItoBlob(dataURI) {
-  // convert base64/URLEncoded data component to raw binary data held in a string
-  var byteString;
-  if (dataURI.split(",")[0].indexOf("base64") >= 0)
-    byteString = atob(dataURI.split(",")[1]);
-  else byteString = unescape(dataURI.split(",")[1]);
-
-  // separate out the mime component
-  var mimeString = dataURI.split(",")[0].split(":")[1].split(";")[0];
-
-  // write the bytes of the string to a typed array
-  var ia = new Uint8Array(byteString.length);
-  for (var i = 0; i < byteString.length; i++) {
-    ia[i] = byteString.charCodeAt(i);
-  }
-
-  return new Blob([ia], { type: mimeString });
 }
 
 function buildForm(file, picture) {
@@ -103,19 +87,28 @@ export default class Plugin {
     };
 
     this.table = new Table();
+    document.getElementById("save-button").onclick = ((plugin) =>
+      function () {
+        plugin.save();
+      })(this);
+    document.getElementById("load-button").onclick = ((plugin) =>
+      function () {
+        plugin.load();
+      })(this);
 
     showTechInfo(this.auth);
   }
 
   load() {
-    loadPluginInstanceDetailsFromBackend(this.auth);
+    loadPluginInstanceDetailsFromBackend(this.auth, this.table);
   }
 
   save() {
-    const file = this.table.exportCSVBlob();
-    const img = this.table.exportImage();
-    const picture = dataURItoBlob(img[0].src);
+    const tableData = JSON.stringify(this.table.getData());
+    const file = new Blob([tableData], { type: "application/json" });
 
-    sendForm(buildForm(file, picture), this.auth);
+    this.table.exportImage((picture) =>
+      sendForm(buildForm(file, picture), this.auth)
+    );
   }
 }

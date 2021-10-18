@@ -45,7 +45,7 @@ function loadTableDataFromBackend(tableDataURL, table) {
     })
     .then(function (tableData) {
       if (tableData) {
-        table.loadData(JSON.parse(tableData));
+        table.loadData(tableData);
       }
     });
 }
@@ -104,8 +104,7 @@ export default class Plugin {
   }
 
   save() {
-    const tableData = JSON.stringify(this.table.getData());
-    const file = new Blob([tableData], { type: "application/json" });
+    const file = new Blob([this.table.getData()], { type: "application/json" });
 
     this.table.exportImage((picture) =>
       sendForm(buildForm(file, picture), this.auth)

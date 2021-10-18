@@ -23,30 +23,75 @@ Handsontable.renderers.registerRenderer(
 );
 
 Handsontable.renderers.registerRenderer(
-  "fracRender",
-  function (hot, td, row, col, prop, value) {
-    Handsontable.renderers.TextRenderer.apply(this, arguments);
-    if (value > 0) {
-      const f = new frac(value);
-      td.innerHTML =
-        '<div title="' +
-        f.toFraction() +
-        (f.d !== 1 && f > 1 ? " = " + f.toFraction(true) : "") +
-        (f.d !== 1 ? " = " + f / 1 : "") +
-        '">' +
-        f.toString() +
-        "</div>";
-    } else td.innerHTML = value;
-  }
-);
-
-Handsontable.renderers.registerRenderer(
   "linkRender",
   function (hot, td, row, col, prop, value) {
     Handsontable.renderers.TextRenderer.apply(this, arguments);
     if (value !== undefined && value !== null) {
       td.innerHTML = '<a href="' + td.innerHTML + '">PubChem</a>';
     }
+  }
+);
+
+function fracUnitRenderHelper(td, value, unit) {
+  if (value > 0) {
+    const f = new frac(value);
+    td.innerHTML =
+      '<div title="' +
+      f.toFraction() +
+      (f.d !== 1 && f > 1 ? " = " + f.toFraction(true) : "") +
+      (f.d !== 1 ? " = " + f / 1 : "") +
+      '">' +
+      f.toString() +
+      (unit ? " " + unit : "") +
+      "</div>";
+  } else td.innerHTML = value;
+}
+
+Handsontable.renderers.registerRenderer(
+  "fracRender",
+  function (hot, td, row, col, prop, value) {
+    Handsontable.renderers.TextRenderer.apply(this, arguments);
+    fracUnitRenderHelper(td, value, "");
+  }
+);
+
+Handsontable.renderers.registerRenderer(
+  "amountRender",
+  function (hot, td, row, col, prop, value) {
+    Handsontable.renderers.TextRenderer.apply(this, arguments);
+    fracUnitRenderHelper(td, value, "mol");
+  }
+);
+
+Handsontable.renderers.registerRenderer(
+  "mwRender",
+  function (hot, td, row, col, prop, value) {
+    Handsontable.renderers.TextRenderer.apply(this, arguments);
+    fracUnitRenderHelper(td, value, "g/mol");
+  }
+);
+
+Handsontable.renderers.registerRenderer(
+  "densityRender",
+  function (hot, td, row, col, prop, value) {
+    Handsontable.renderers.TextRenderer.apply(this, arguments);
+    fracUnitRenderHelper(td, value, "g/cm³");
+  }
+);
+
+Handsontable.renderers.registerRenderer(
+  "massRender",
+  function (hot, td, row, col, prop, value) {
+    Handsontable.renderers.TextRenderer.apply(this, arguments);
+    fracUnitRenderHelper(td, value, "g");
+  }
+);
+
+Handsontable.renderers.registerRenderer(
+  "volumeRender",
+  function (hot, td, row, col, prop, value) {
+    Handsontable.renderers.TextRenderer.apply(this, arguments);
+    fracUnitRenderHelper(td, value, "mL");
   }
 );
 
@@ -79,7 +124,7 @@ const col = {
   Amount: {
     prop: "amount",
     name: "Amount",
-    settings: { validator: "positive", renderer: "fracRender" },
+    settings: { validator: "positive", renderer: "amountRender" },
   }, //Stoffmenge, format: x mol
   EQ: {
     prop: "eq.val",
@@ -103,22 +148,22 @@ const col = {
   MW: {
     prop: "prop.mw",
     name: "MW",
-    settings: { validator: "positive", renderer: "fracRender" },
+    settings: { validator: "positive", renderer: "mwRender" },
   }, //molecular weight, format: x g/mol
   Density: {
     prop: "prop.density",
     name: "Density",
-    settings: { validator: "positive", renderer: "fracRender" },
+    settings: { validator: "positive", renderer: "densityRender" },
   },
   Mass: {
     prop: "prop.mass",
     name: "Mass",
-    settings: { validator: "positive", renderer: "fracRender" },
+    settings: { validator: "positive", renderer: "massRender" },
   },
   Volume: {
     prop: "prop.volume",
     name: "Volume",
-    settings: { validator: "positive", renderer: "fracRender" },
+    settings: { validator: "positive", renderer: "volumeRender" },
   },
   Notes: { prop: "notes", name: "Notes", settings: { width: 250 } },
   Source: {
@@ -439,15 +484,11 @@ export default class Table {
   }
 
   getData() {
-    return this.hot.getSourceData();
+    return JSON.stringify(this.hot.getSourceData());
   }
 
   loadData(tableData) {
-    this.hot.loadData(tableData);
-  }
-
-  exportCSVBlob() {
-    return this.hot.getPlugin("exportFile").exportAsBlob("csv");
+    this.hot.loadData(JSON.parse(tableData));
   }
 
   exportImage(callback) {

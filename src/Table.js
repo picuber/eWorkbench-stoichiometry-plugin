@@ -219,6 +219,16 @@ function getEQRefRow(hot) {
   return hot.getDataAtProp(col.EQRef.prop).indexOf(true);
 }
 
+function toggleSearchState(hot, row, cells, state) {
+  if (typeof cells === "number") {
+    cells = [cells];
+  }
+  cells.forEach((cell) => {
+    if (state) hot.setCellMeta(row, cell, "className", "search-bg");
+    else hot.setCellMeta(row, cell, "className", "");
+  });
+}
+
 function updateProperties(hot, row) {
   const source = "updateProperties";
 
@@ -320,6 +330,22 @@ function addHooks(hot, db) {
         else hot.setDataAtRowProp(row, col.Status.prop, null, "searchLock");
       }
 
+      if (
+        (prop === col.CAS.prop ||
+          prop === col.CAS.prop ||
+          prop === col.Name.prop ||
+          prop === col.InChI.prop ||
+          prop === col.InChIKey.prop ||
+          prop === col.CID.prop ||
+          prop === col.SMILES.prop ||
+          prop === col.MW.prop ||
+          prop === col.Density.prop ||
+          prop === col.Source.prop) &&
+        source !== "searchFill"
+      ) {
+        toggleSearchState(hot, row, hot.propToCol(prop), false);
+      }
+
       if (prop === col.Search.prop) {
         if (newValue === "" || newValue === null || newValue === undefined)
           return;
@@ -330,20 +356,39 @@ function addHooks(hot, db) {
           if (isNaN(data.Density)) {
             data.Density = "N/A";
           }
-          hot.setDataAtRowProp(
-            [
-              [row, col.CAS.prop, data.CAS],
-              [row, col.Name.prop, data.Name],
-              [row, col.InChI.prop, data.InChI],
-              [row, col.InChIKey.prop, data.InChIKey],
-              [row, col.CID.prop, data.CID],
-              [row, col.SMILES.prop, data.CanonicalSMILES],
-              [row, col.MW.prop, data.MolecularWeight],
-              [row, col.Density.prop, data.Density],
-              [row, col.Source.prop, data.Source],
-            ],
-            "searchFill"
-          );
+          hot.batch(() => {
+            toggleSearchState(
+              hot,
+              row,
+              [
+                col.CAS.idx,
+                col.Name.idx,
+                col.InChI.idx,
+                col.InChIKey.idx,
+                col.CID.idx,
+                col.SMILES.idx,
+                col.MW.idx,
+                col.Density.idx,
+                col.Source.idx,
+              ],
+              true
+            );
+            hot.setDataAtRowProp(
+              [
+                [row, col.CAS.prop, data.CAS],
+                [row, col.Name.prop, data.Name],
+                [row, col.InChI.prop, data.InChI],
+                [row, col.InChIKey.prop, data.InChIKey],
+                [row, col.CID.prop, data.CID],
+                [row, col.SMILES.prop, data.CanonicalSMILES],
+                [row, col.MW.prop, data.MolecularWeight],
+                [row, col.Density.prop, data.Density],
+                [row, col.Source.prop, data.Source],
+              ],
+              "searchFill"
+            );
+          });
+
           // updateProperties(hot, row);
         })(row);
         const cb_fail = (err) => {

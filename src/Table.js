@@ -578,6 +578,7 @@ export default class Table {
       for (let i = 0; i < this.hot.countSourceRows(); i++) {
         redrawSearchState(this.hot, i);
       }
+      this.hot.render();
     } catch {
       () => {};
     }

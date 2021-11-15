@@ -1,7 +1,6 @@
 import PubChem from "./PubChem.js";
 import Handsontable from "handsontable";
 import "handsontable/dist/handsontable.full.css";
-import frac from "fraction.js";
 import html2canvas from "html2canvas";
 
 Handsontable.validators.registerValidator("positive", (value, cb) =>
@@ -32,26 +31,24 @@ Handsontable.renderers.registerRenderer(
   }
 );
 
-function fracUnitRenderHelper(td, value, unit) {
+function sigFigRenderHelper(td, value, unit, precision) {
   if (value > 0) {
-    const f = new frac(value);
-    td.innerHTML =
-      '<div title="' +
-      f.toFraction() +
-      (f.d !== 1 && f > 1 ? " = " + f.toFraction(true) : "") +
-      (f.d !== 1 ? " = " + f / 1 : "") +
-      '">' +
-      f.toString() +
-      (unit ? " " + unit : "") +
-      "</div>";
-  } else td.innerHTML = value;
+    td.innerHTML = Number(value).toPrecision(precision) + " " + unit;
+  }
+}
+
+function roundedRenderHelper(td, value, unit, precision) {
+  if (value > 0) {
+    td.innerHTML = Number(value).toFixed(precision) + " " + unit;
+  }
 }
 
 Handsontable.renderers.registerRenderer(
-  "fracRender",
+  "eqRender",
   function (hot, td, row, col, prop, value) {
     Handsontable.renderers.TextRenderer.apply(this, arguments);
-    fracUnitRenderHelper(td, value, "");
+    // fracUnitRenderHelper(td, value, "");
+    roundedRenderHelper(td, value, "", 2);
   }
 );
 
@@ -59,7 +56,7 @@ Handsontable.renderers.registerRenderer(
   "amountRender",
   function (hot, td, row, col, prop, value) {
     Handsontable.renderers.TextRenderer.apply(this, arguments);
-    fracUnitRenderHelper(td, value, "mol");
+    roundedRenderHelper(td, value, "mol", 2);
   }
 );
 
@@ -67,7 +64,8 @@ Handsontable.renderers.registerRenderer(
   "mwRender",
   function (hot, td, row, col, prop, value) {
     Handsontable.renderers.TextRenderer.apply(this, arguments);
-    fracUnitRenderHelper(td, value, "g/mol");
+    // fracUnitRenderHelper(td, value, "g/mol");
+    roundedRenderHelper(td, value, "g/mol", 3);
   }
 );
 
@@ -75,7 +73,8 @@ Handsontable.renderers.registerRenderer(
   "densityRender",
   function (hot, td, row, col, prop, value) {
     Handsontable.renderers.TextRenderer.apply(this, arguments);
-    fracUnitRenderHelper(td, value, "g/cm³");
+    // fracUnitRenderHelper(td, value, "g/cm³");
+    roundedRenderHelper(td, value, "g/cm", 4);
   }
 );
 
@@ -83,7 +82,8 @@ Handsontable.renderers.registerRenderer(
   "massRender",
   function (hot, td, row, col, prop, value) {
     Handsontable.renderers.TextRenderer.apply(this, arguments);
-    fracUnitRenderHelper(td, value, "g");
+    // fracUnitRenderHelper(td, value, "g");
+    sigFigRenderHelper(td, value, "g", 3);
   }
 );
 
@@ -91,7 +91,8 @@ Handsontable.renderers.registerRenderer(
   "volumeRender",
   function (hot, td, row, col, prop, value) {
     Handsontable.renderers.TextRenderer.apply(this, arguments);
-    fracUnitRenderHelper(td, value, "mL");
+    // fracUnitRenderHelper(td, value, "mL");
+    sigFigRenderHelper(td, value, "mL", 3);
   }
 );
 
@@ -129,7 +130,7 @@ const col = {
   EQ: {
     prop: "eq.val",
     name: "Eq",
-    settings: { validator: "positive", renderer: "fracRender" },
+    settings: { validator: "positive", renderer: "eqRender" },
   }, //Äquivalente / Equivalents
   EQRef: {
     prop: "eq.ref",
@@ -171,6 +172,7 @@ const col = {
     name: "Source",
     settings: { readOnly: true, renderer: "linkRender" },
   },
+  Highlight: { prop: "highlight", name: "", settings: { readOnly: true } },
 };
 Object.keys(col).forEach((key) => (col[key].settings.data = col[key].prop));
 Object.keys(col).forEach((key, i) => (col[key].idx = i));
@@ -201,7 +203,17 @@ const settings = {
   // columns
   colHeaders: Object.values(col).map((val) => val.name),
   columns: Object.values(col).map((val) => val.settings),
-  hiddenColumns: { indicators: true },
+  hiddenColumns: {
+    columns: [
+      col.Name.idx,
+      col.CID.idx,
+      col.SMILES.idx,
+      col.InChIKey.idx,
+      col.InChI.idx,
+      col.Highlight.idx,
+    ],
+    copyPasteEnabled: false,
+  },
 
   // general
   contextMenu: [
@@ -219,14 +231,31 @@ function getEQRefRow(hot) {
   return hot.getDataAtProp(col.EQRef.prop).indexOf(true);
 }
 
+function redrawSearchState(hot, row) {
+  const cells = hot.getDataAtRowProp(row, col.Highlight.prop).split(",");
+  cells.forEach((cell) => {
+    if (cell >= 0) hot.setCellMeta(row, Number(cell), "className", "search-bg");
+  });
+}
+
 function toggleSearchState(hot, row, cells, state) {
   if (typeof cells === "number") {
     cells = [cells];
   }
+
+  let highlighted = hot.getDataAtRowProp(row, col.Highlight.prop) || "";
+
   cells.forEach((cell) => {
-    if (state) hot.setCellMeta(row, cell, "className", "search-bg");
-    else hot.setCellMeta(row, cell, "className", "");
+    if (state) {
+      hot.setCellMeta(row, cell, "className", "search-bg");
+      highlighted += "," + cell;
+    } else {
+      hot.setCellMeta(row, cell, "className", "");
+      highlighted = highlighted.replaceAll("," + cell, "");
+    }
   });
+
+  hot.setDataAtRowProp(row, col.Highlight.prop, highlighted, "updateHighlight");
 }
 
 function updateProperties(hot, row) {
@@ -344,6 +373,10 @@ function addHooks(hot, db) {
         source !== "searchFill"
       ) {
         toggleSearchState(hot, row, hot.propToCol(prop), false);
+      }
+
+      if (prop === col.Highlight.prop && source !== "updateHighlight") {
+        redrawSearchState(hot, row);
       }
 
       if (prop === col.Search.prop) {
@@ -476,7 +509,8 @@ function addHooks(hot, db) {
   Handsontable.hooks.add("afterRemoveRow", afterRemoveRow, hot);
 }
 
-function setNamesHandler(table) {
+function setupViews(table) {
+  const button = document.getElementById("viewState-button");
   const cols = [
     col.Name.idx,
     col.CID.idx,
@@ -484,23 +518,27 @@ function setNamesHandler(table) {
     col.InChIKey.idx,
     col.InChI.idx,
   ];
+  table._viewState = true;
 
-  table.showIDs = ((hot) =>
+  table.setViewState = ((table) =>
+    function (state) {
+      if (state) {
+        table.hot.getPlugin("hiddenColumns").hideColumns(cols);
+        button.innerHTML = "View: CAS only";
+      } else {
+        table.hot.getPlugin("hiddenColumns").showColumns(cols);
+        button.innerHTML = "View: All IDs";
+      }
+      table.hot.render();
+      table._viewState = state;
+    })(table);
+
+  table.toggleViewState = ((table) =>
     function () {
-      hot.getPlugin("hiddenColumns").showColumns(cols);
-      hot.render();
-    })(table.hot);
-  document.getElementById("show-ids").onclick = table.showIDs;
+      table.setViewState(!table._viewState);
+    })(table);
 
-  table.hideIDs = ((hot) =>
-    function () {
-      hot.getPlugin("hiddenColumns").hideColumns(cols);
-      hot.render();
-    })(table.hot);
-  document.getElementById("hide-ids").onclick = table.hideIDs;
-
-  // Hide them per default
-  table.hideIDs();
+  button.onclick = table.toggleViewState;
 }
 
 export default class Table {
@@ -520,7 +558,7 @@ export default class Table {
     });
 
     addHooks(this.hot, this.db);
-    setNamesHandler(this);
+    setupViews(this);
     this.hot.setDataAtRowProp([
       [0, col.EQRef.prop, true],
       [0, col.Type.prop, "[auto]"],
@@ -529,11 +567,20 @@ export default class Table {
   }
 
   getData() {
-    return JSON.stringify(this.hot.getSourceData());
+    return JSON.stringify([this.hot.getSourceData(), this._viewState]);
   }
 
   loadData(tableData) {
-    this.hot.loadData(JSON.parse(tableData));
+    try {
+      const data = JSON.parse(tableData);
+      this.hot.loadData(data[0]);
+      this.setViewState(data[1]);
+      for (let i = 0; i < this.hot.countSourceRows(); i++) {
+        redrawSearchState(this.hot, i);
+      }
+    } catch {
+      () => {};
+    }
   }
 
   exportImage(callback) {

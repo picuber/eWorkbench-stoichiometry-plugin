@@ -15,3 +15,19 @@ export function parse_CAS(names) {
   const filtered = names.filter((name) => cas_regex.test(name));
   return filtered.length >= 1 ? filtered[0] : null;
 }
+
+import frac from "fraction.js";
+export function fracUnitRenderHelper(td, value, unit) {
+  if (value > 0) {
+    const f = new frac(value);
+    td.innerHTML =
+      '<div title="' +
+      f.toFraction() +
+      (f.d !== 1 && f > 1 ? " = " + f.toFraction(true) : "") +
+      (f.d !== 1 ? " = " + f / 1 : "") +
+      '">' +
+      f.toString() +
+      (unit ? " " + unit : "") +
+      "</div>";
+  } else td.innerHTML = value;
+}

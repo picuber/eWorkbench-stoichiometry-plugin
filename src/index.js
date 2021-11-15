@@ -1,11 +1,17 @@
 import "./style.css";
 import Plugin from "./eWorkbenchPlugin.js";
 
-console.log("Hello World from your main file!");
-
 const plugin = new Plugin();
 window.onload = plugin.load();
 
+/*
+ *  ===== Debug Tests =====
+ */
+
+/**
+ *  Tests the Connection to the PubChem Database and the different methods of
+ *  querying it.
+ */
 document.getElementById("test_db").onclick = function () {
   const print = (info) => (data) => {
     console.log(info);
@@ -25,6 +31,9 @@ document.getElementById("test_db").onclick = function () {
   plugin.table.db.by("PubChem CID", "1234", print("No Density"));
 };
 
+/**
+ * Tests the Parsers for the different search methods ([auto] mode )
+ */
 document.getElementById("test_parser").onclick = function () {
   const test = (name, fn, arg, shouldPass = true) =>
     console.log(name + ": " + (fn(arg) === shouldPass ? "pass" : "fail"));
@@ -44,6 +53,9 @@ document.getElementById("test_parser").onclick = function () {
   test("SMILES slash positive", plugin.table.db.parse.isSMILES, "F/C=C\\F");
 };
 
+/**
+ * Tests the Export and Display of the preview image
+ */
 document.getElementById("test_image").onclick = function () {
   plugin.table.exportImage();
 };

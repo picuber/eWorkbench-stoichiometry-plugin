@@ -2,7 +2,7 @@ import Table from "./Table.js";
 
 // get params from location
 function parseLocation() {
-  const params = location.href.split("?")[1].split("&");
+  const params = location.href.split("?")[1]?.split("&");
   const locationData = {};
 
   for (let x in params) {

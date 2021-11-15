@@ -3,6 +3,10 @@ import Handsontable from "handsontable";
 import "handsontable/dist/handsontable.full.css";
 import html2canvas from "html2canvas";
 
+/**
+ * Adds a Validator to the Table that checks if the value is positive or
+ * (intentionally) emyty
+ */
 Handsontable.validators.registerValidator("positive", (value, cb) =>
   cb(value > 0 || value === null || value === "N/A")
 );
@@ -541,6 +545,14 @@ function setupViews(table) {
   button.onclick = table.toggleViewState;
 }
 
+function rerender(hot) {
+  hot.setDataAtRowProp(
+    0,
+    col.Notes.prop,
+    hot.getDataAtRowProp(0, col.Notes.prop)
+  );
+}
+
 export default class Table {
   constructor() {
     console.log("Hello Table");
@@ -578,18 +590,14 @@ export default class Table {
       for (let i = 0; i < this.hot.countSourceRows(); i++) {
         redrawSearchState(this.hot, i);
       }
-      this.hot.render();
+      rerender(this.hot);
     } catch {
       () => {};
     }
   }
 
   exportImage(callback) {
-    this.hot.setDataAtRowProp(
-      0,
-      col.Notes.prop,
-      this.hot.getDataAtRowProp(0, col.Notes.prop)
-    );
+    rerender(this.hot);
     return html2canvas(document.getElementById("table"), {
       width: document.getElementsByClassName("ht_clone_top")[0].clientWidth,
     }).then((canvas) => canvas.toBlob(callback));

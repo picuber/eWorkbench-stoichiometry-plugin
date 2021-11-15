@@ -63,9 +63,15 @@ function askPugView(db, CID, data, cb, cb_fail) {
   );
 }
 
+/**
+ *  Represets the connection to the PubChem Database, and proxies the requests
+ *
+ * @todo repeat a call via compound/listkey/<listkey>/<output> if a listkey is returned
+ */
 export default class PubChem {
-  // TODO
-  // return: listkey -> new call with compound/listkey/<listkey>/<output>
+  /**
+   * Creates a new PubChem instance with its own RateLimiter and Parser
+   */
   constructor() {
     console.log("Hello PubChem");
     this.prolog_rest = "https://pubchem.ncbi.nlm.nih.gov/rest/pug";
@@ -74,6 +80,14 @@ export default class PubChem {
     this.parse = new Parser();
   }
 
+  /**
+   *  Searches the Database by the given type
+   *
+   *  @param {string} type - The type of chemical identifier
+   *  @param {string} value - The search string
+   *  @param {function} cb - The callback function for a successful search
+   *  @param {function} cb_fail - The callback function for a failed search
+   */
   by(type, value, cb, cb_fail) {
     switch (type) {
       case "CAS":
@@ -97,25 +111,71 @@ export default class PubChem {
     }
   }
 
+  /**
+   *  Searches the Database with an automatically determined type
+   *
+   *  @param {string} value - The search string
+   *  @param {function} cb - The callback function for a successful search
+   *  @param {function} cb_fail - The callback function for a failed search
+   */
   byAuto(value, cb, cb_fail) {
     this.by(this.parse.auto(value), value, cb, cb_fail);
   }
 }
 
+/**
+ * Holds the different validatiors for the chemical Identifiers and an automatic
+ * parser that determines the type. The Validators have no guarantee for correctness
+ */
 class Parser {
   constructor() {}
+
+  /**
+   * Validator for CAS
+   *
+   * @param {string} input - the identifier to be validated
+   * @return {boolean} Whether the input is of type CAS
+   */
   isCAS(input) {
     return /^\d{1,7}-\d{1,2}-\d$/.test(input.trim());
   }
+
+  /**
+   * Validator for InChI
+   *
+   * @param {string} input - the identifier to be validated
+   * @return {boolean} Whether the input is of type InChI
+   */
   isInChI(input) {
     return /^InChI=1S?\/[^\s]+(\s|$)/.test(input.trim());
   }
+
+  /**
+   * Validator for InChiKey
+   *
+   * @param {string} input - the identifier to be validated
+   * @return {boolean} Whether the input is of type InChIKey
+   */
   isInChIKey(input) {
     return /^(InChIKey=)?[A-Z]{14}-[A-Z]{10}-[A-Z]$/.test(input.trim());
   }
+
+  /**
+   * Validator for PubChem CID (compound ID)
+   *
+   * @param {string} input - the identifier to be validated
+   * @return {boolean} Whether the input is of type CID
+   */
   isCID(input) {
     return /^[0-9]+$/.test(input.trim());
   }
+
+  /**
+   * Validator for SMILES. Might result in false negatives
+   *
+   * @param {string} input - the identifier to be validated
+   * @return {boolean} Whether the input is of type SMILES
+   */
   isSMILES(input) {
     const elements =
       "(H|He|Li|Be|B|C|N|O|F|Ne|Na|Mg|Al|Si|P|S|Cl|Ar|" +
@@ -130,6 +190,13 @@ class Parser {
     return new RegExp("^(" + elements + "|" + rest + ")+$").test(input.trim());
   }
 
+  /**
+   * Automatic Parser. Runs all validators and returns the type of the first
+   * matching type
+   *
+   * @param {string} value - the identifier to be parsed
+   * @return {string} The type of the identifier for the value
+   */
   auto(value) {
     if (this.isCAS(value)) return "CAS";
     else if (this.isInChI(value)) return "InChI";
@@ -140,13 +207,27 @@ class Parser {
   }
 }
 
+/**
+ * All requests done via this rate limiter make run at an given maximum rate
+ * to keep below the database requirements
+ */
 class RateLimit {
+  /**
+   * Creates a new RateLimit instance
+   *
+   * @param {number} interval - How often a request can be made (in ms)
+   */
   constructor(interval) {
     this.interval = interval;
     this.queue = [];
     this.last = new Date().getTime();
   }
 
+  /**
+   * Adds a call to the rate limiter queue, and runs it when the time comes
+   *
+   * @param {function} func - The function to run
+   */
   schedule(func) {
     if (func) this.queue.push(func);
 

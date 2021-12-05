@@ -30,20 +30,30 @@ Handsontable.renderers.registerRenderer(
   function (hot, td, row, col, prop, value) {
     Handsontable.renderers.TextRenderer.apply(this, arguments);
     if (value !== undefined && value !== null) {
-      td.innerHTML = '<a href="' + td.innerHTML + '">PubChem</a>';
+      td.innerHTML =
+        '<a href="' +
+        td.innerHTML +
+        '" target="_blank" rel="noreferrer noopener">PubChem</a>';
     }
   }
 );
 
-function sigFigRenderHelper(td, value, unit, precision) {
+function sigFigRenderHelper(td, value, precision, unit) {
   if (value > 0) {
-    td.innerHTML = Number(value).toPrecision(precision) + " " + unit;
-  }
-}
+    let val_scaled, unit_str;
+    [val_scaled, unit_str] = ((value, unit) => {
+      if (typeof unit === "string") {
+        return [value, " " + unit];
+      } else if (Array.isArray(unit) && unit.length === 3) {
+        if (value < 1) return [value * 1000, unit[0]];
+        else if (value < 1000) return [value, unit[1]];
+        else return [value / 1000, unit[2]];
+      } else return [value, ""];
+    })(value, unit);
 
-function roundedRenderHelper(td, value, unit, precision) {
-  if (value > 0) {
-    td.innerHTML = Number(value).toFixed(precision) + " " + unit;
+    td.innerHTML = Number(val_scaled).toPrecision(precision) + unit_str;
+    // If rounding instead of significant figures is desired, replace whith this:
+    // td.innerHTML = Number(value).toFixed(precision) + unit_str;
   }
 }
 
@@ -51,8 +61,7 @@ Handsontable.renderers.registerRenderer(
   "eqRender",
   function (hot, td, row, col, prop, value) {
     Handsontable.renderers.TextRenderer.apply(this, arguments);
-    // fracUnitRenderHelper(td, value, "");
-    roundedRenderHelper(td, value, "", 2);
+    sigFigRenderHelper(td, value, 4);
   }
 );
 
@@ -60,7 +69,7 @@ Handsontable.renderers.registerRenderer(
   "amountRender",
   function (hot, td, row, col, prop, value) {
     Handsontable.renderers.TextRenderer.apply(this, arguments);
-    roundedRenderHelper(td, value, "mol", 2);
+    sigFigRenderHelper(td, value, 4, ["μmol", "mmol", "mol"]);
   }
 );
 
@@ -68,8 +77,7 @@ Handsontable.renderers.registerRenderer(
   "mwRender",
   function (hot, td, row, col, prop, value) {
     Handsontable.renderers.TextRenderer.apply(this, arguments);
-    // fracUnitRenderHelper(td, value, "g/mol");
-    roundedRenderHelper(td, value, "g/mol", 3);
+    sigFigRenderHelper(td, value, 4, "g/mol");
   }
 );
 
@@ -77,8 +85,7 @@ Handsontable.renderers.registerRenderer(
   "densityRender",
   function (hot, td, row, col, prop, value) {
     Handsontable.renderers.TextRenderer.apply(this, arguments);
-    // fracUnitRenderHelper(td, value, "g/cm³");
-    roundedRenderHelper(td, value, "g/cm", 4);
+    sigFigRenderHelper(td, value, 4, "g/cm³");
   }
 );
 
@@ -86,8 +93,7 @@ Handsontable.renderers.registerRenderer(
   "massRender",
   function (hot, td, row, col, prop, value) {
     Handsontable.renderers.TextRenderer.apply(this, arguments);
-    // fracUnitRenderHelper(td, value, "g");
-    sigFigRenderHelper(td, value, "g", 3);
+    sigFigRenderHelper(td, value, 4, ["mg", "g", "kg"]);
   }
 );
 
@@ -95,8 +101,7 @@ Handsontable.renderers.registerRenderer(
   "volumeRender",
   function (hot, td, row, col, prop, value) {
     Handsontable.renderers.TextRenderer.apply(this, arguments);
-    // fracUnitRenderHelper(td, value, "mL");
-    sigFigRenderHelper(td, value, "mL", 3);
+    sigFigRenderHelper(td, value, 4, ["μL", "mL", "L"]);
   }
 );
 
@@ -130,7 +135,7 @@ const col = {
     prop: "amount",
     name: "Amount",
     settings: { validator: "positive", renderer: "amountRender" },
-  }, //Stoffmenge, format: x mol
+  }, //Stoffmenge, format: x mmol
   EQ: {
     prop: "eq.val",
     name: "Eq",
@@ -170,7 +175,7 @@ const col = {
     name: "Volume",
     settings: { validator: "positive", renderer: "volumeRender" },
   },
-  Notes: { prop: "notes", name: "Notes", settings: { width: 250 } },
+  Notes: { prop: "notes", name: "Notes", settings: {} },
   Source: {
     prop: "source",
     name: "Source",
@@ -270,11 +275,18 @@ function updateProperties(hot, row) {
   const density = hot.getDataAtRowProp(row, col.Density.prop);
 
   if (amount > 0 && mw > 0) {
-    hot.setDataAtRowProp(row, col.Mass.prop, amount * mw, source);
+    // Mass[g] = Amount[mmol] * MolecularWeight[g/mol] / 1000
+    hot.setDataAtRowProp(row, col.Mass.prop, (amount * mw) / 1000, source);
   }
 
   if (amount > 0 && mw > 0 && density > 0) {
-    hot.setDataAtRowProp(row, col.Volume.prop, (amount * mw) / density, source);
+    // Volume[mL = cm³] = (Amount[mmol] * MolecularWeight[g/mol]) / (Density[g/cm³] * 1000)
+    hot.setDataAtRowProp(
+      row,
+      col.Volume.prop,
+      (amount * mw) / (density * 1000),
+      source
+    );
   }
 }
 
@@ -283,13 +295,22 @@ function updateAmount(hot, row, prop, val) {
 
   const mw = hot.getDataAtRowProp(row, col.MW.prop);
   const density = hot.getDataAtRowProp(row, col.Density.prop);
+
   if (prop === col.Mass.prop && val > 0 && mw > 0) {
-    hot.setDataAtRowProp(row, col.Amount.prop, val / mw, source);
+    //  Amount[mmol] = (Mass[g] * 1000) / MolecularWeight[g/mol]
+    hot.setDataAtRowProp(row, col.Amount.prop, (val * 1000) / mw, source);
   }
   if (prop === col.Volume.prop && density > 0 && val > 0 && mw > 0) {
-    hot.setDataAtRowProp(row, col.Amount.prop, (density * val) / mw, source);
+    // Amount[mmol] = (Density[g/cm³] * Volume[mL = cm³] * 1000) / MolecularWeight[g/mol]
+    hot.setDataAtRowProp(
+      row,
+      col.Amount.prop,
+      (density * val * 1000) / mw,
+      source
+    );
   }
   if (prop === col.Volume.prop && density <= 0) {
+    // If no density is known, volume is not applicable
     hot.setDataAtRowProp(row, col.Volume.prop, "N/A");
   }
 }

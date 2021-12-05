@@ -243,28 +243,38 @@ function getEQRefRow(hot) {
 function redrawSearchState(hot, row) {
   const cells = hot.getDataAtRowProp(row, col.Highlight.prop).split(",");
   cells.forEach((cell) => {
-    if (cell >= 0) hot.setCellMeta(row, Number(cell), "className", "search-bg");
+    if (cell >= 0 && cell !== null)
+      hot.setCellMeta(row, Number(cell), "className", "search-bg");
   });
 }
 
-function toggleSearchState(hot, row, cells, state) {
-  if (typeof cells === "number") {
-    cells = [cells];
-  }
-
-  let highlighted = hot.getDataAtRowProp(row, col.Highlight.prop) || "";
-
+function setRowSearchHighlight(hot, row) {
+  const cells = [
+    col.CAS.idx,
+    col.Name.idx,
+    col.InChI.idx,
+    col.InChIKey.idx,
+    col.CID.idx,
+    col.SMILES.idx,
+    col.MW.idx,
+    col.Density.idx,
+    col.Source.idx,
+  ];
   cells.forEach((cell) => {
-    if (state) {
-      hot.setCellMeta(row, cell, "className", "search-bg");
-      highlighted += "," + cell;
-    } else {
-      hot.setCellMeta(row, cell, "className", "");
-      highlighted = highlighted.replaceAll("," + cell, "");
-    }
+    hot.setCellMeta(row, cell, "className", "search-bg");
   });
 
-  hot.setDataAtRowProp(row, col.Highlight.prop, highlighted, "updateHighlight");
+  hot.setDataAtRowProp(row, col.Highlight.prop, cells.join(), "setHighlight");
+}
+
+function delSearchHighlight(hot, row, cell) {
+  hot.setCellMeta(row, cell, "className", "");
+  hot.setDataAtRowProp(
+    row,
+    col.Highlight.prop,
+    hot.getDataAtRowProp(row, col.Highlight.prop).replaceAll(cell, ""),
+    "setHighlight"
+  );
 }
 
 function updateProperties(hot, row) {
@@ -397,10 +407,10 @@ function addHooks(hot, db) {
           prop === col.Source.prop) &&
         source !== "searchFill"
       ) {
-        toggleSearchState(hot, row, hot.propToCol(prop), false);
+        delSearchHighlight(hot, row, hot.propToCol(prop));
       }
 
-      if (prop === col.Highlight.prop && source !== "updateHighlight") {
+      if (prop === col.Highlight.prop && source !== "setHighlight") {
         redrawSearchState(hot, row);
       }
 
@@ -415,22 +425,7 @@ function addHooks(hot, db) {
             data.Density = "N/A";
           }
           hot.batch(() => {
-            toggleSearchState(
-              hot,
-              row,
-              [
-                col.CAS.idx,
-                col.Name.idx,
-                col.InChI.idx,
-                col.InChIKey.idx,
-                col.CID.idx,
-                col.SMILES.idx,
-                col.MW.idx,
-                col.Density.idx,
-                col.Source.idx,
-              ],
-              true
-            );
+            setRowSearchHighlight(hot, row);
             hot.setDataAtRowProp(
               [
                 [row, col.CAS.prop, data.CAS],
@@ -597,6 +592,7 @@ export default class Table {
       [0, col.Type.prop, "[auto]"],
     ]);
     this.hot.selectCell(0, col.Search.prop);
+    console.log(this);
   }
 
   getData() {
@@ -607,11 +603,10 @@ export default class Table {
     try {
       const data = JSON.parse(tableData);
       this.hot.loadData(data[0]);
-      this.setViewState(data[1]);
       for (let i = 0; i < this.hot.countSourceRows(); i++) {
         redrawSearchState(this.hot, i);
       }
-      rerender(this.hot);
+      this.setViewState(data[1]);
     } catch {
       () => {};
     }

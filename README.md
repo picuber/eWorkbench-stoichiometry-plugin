@@ -1,7 +1,7 @@
 # eWorkbench-Ansatztool
 
 ## Requirements
-You need have Node.js (>= 12.13.0) and `npm` (>= 6.12.0) installed.
+You need have Node.js (>= 17.3.1) and `npm` (>= 8.3.0) installed.
 It might work with lower versions, but there is no guarantee for it.
 
 ## Installation

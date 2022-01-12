@@ -31,3 +31,10 @@ export function fracUnitRenderHelper(td, value, unit) {
       "</div>";
   } else td.innerHTML = value;
 }
+
+export function showTechInfo(auth) {
+  const techInfo = document.getElementById("tech_info");
+  techInfo.getElementsByClassName("jwt")[0].innerHTML = auth.jwt;
+  techInfo.getElementsByClassName("pk")[0].innerHTML = auth.pk;
+  techInfo.getElementsByClassName("apiBaseUrl")[0].innerHTML = auth.apiBaseUrl;
+}

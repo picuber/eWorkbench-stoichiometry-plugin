@@ -15,13 +15,6 @@ function parseLocation() {
   return locationData;
 }
 
-function showTechInfo(auth) {
-  const techInfo = document.getElementById("tech_info");
-  techInfo.getElementsByClassName("jwt")[0].innerHTML = auth.jwt;
-  techInfo.getElementsByClassName("pk")[0].innerHTML = auth.pk;
-  techInfo.getElementsByClassName("apiBaseUrl")[0].innerHTML = auth.apiBaseUrl;
-}
-
 // load plugin details from backend (Called from onload)
 function loadPluginInstanceDetailsFromBackend(auth, table) {
   const url = auth.apiBaseUrl + auth.pk + "/?jwt=" + auth.jwt;
@@ -95,8 +88,6 @@ export default class Plugin {
       function () {
         plugin.load();
       })(this);
-
-    showTechInfo(this.auth);
   }
 
   load() {

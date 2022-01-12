@@ -11,99 +11,115 @@ Handsontable.validators.registerValidator("positive", (value, cb) =>
   cb(value > 0 || value === null || value === "N/A")
 );
 
-Handsontable.renderers.registerRenderer(
-  "statusRender",
-  function (hot, td, row, col, prop, value) {
-    Handsontable.renderers.TextRenderer.apply(this, arguments);
-    if (value !== undefined && value !== null)
-      td.innerHTML =
-        '<div title="' +
-        td.innerHTML +
-        '">' +
-        Array.from(td.innerHTML)[0] +
-        "</div>";
-  }
-);
+function initHandsontableRenderer() {
+  // ronud the number to a specified precision of significant figures
+  function sigFigRenderHelper(td, value, precision, unit) {
+    if (value > 0) {
+      let val_scaled, unit_str;
+      [val_scaled, unit_str] = ((value, unit) => {
+        if (typeof unit === "string") {
+          // if only one (or no) unit is given, just return as is
+          return [value, " " + unit];
+        } else if (Array.isArray(unit) && unit.length === 3) {
+          /* if multiple (=3) units are given, scale to the correct order of
+           * magnitude, so that the number shows between 1 and 1000 if possible
+           * The middle unit (unit[1]) is the base unit, with which the value
+           * has to be entered
+           */
+          if (value < 1) return [value * 1000, unit[0]];
+          else if (value < 1000) return [value, unit[1]];
+          else return [value / 1000, unit[2]];
+        } else return [value, ""];
+      })(value, unit);
 
-Handsontable.renderers.registerRenderer(
-  "linkRender",
-  function (hot, td, row, col, prop, value) {
-    Handsontable.renderers.TextRenderer.apply(this, arguments);
-    if (value !== undefined && value !== null) {
-      td.innerHTML =
-        '<a href="' +
-        td.innerHTML +
-        '" target="_blank" rel="noreferrer noopener">PubChem</a>';
+      td.innerHTML = Number(val_scaled).toPrecision(precision) + unit_str;
+      // If rounding instead of significant figures is desired, replace whith this:
+      // td.innerHTML = Number(value).toFixed(precision) + unit_str;
     }
   }
-);
 
-function sigFigRenderHelper(td, value, precision, unit) {
-  if (value > 0) {
-    let val_scaled, unit_str;
-    [val_scaled, unit_str] = ((value, unit) => {
-      if (typeof unit === "string") {
-        return [value, " " + unit];
-      } else if (Array.isArray(unit) && unit.length === 3) {
-        if (value < 1) return [value * 1000, unit[0]];
-        else if (value < 1000) return [value, unit[1]];
-        else return [value / 1000, unit[2]];
-      } else return [value, ""];
-    })(value, unit);
+  /* Status shows only as one Emoji (=first character).
+   * The rest of the Status is displayed as a tooltip when hovering over the cell
+   */
+  Handsontable.renderers.registerRenderer(
+    "statusRender",
+    function (hot, td, row, col, prop, value) {
+      Handsontable.renderers.TextRenderer.apply(this, arguments);
+      if (value !== undefined && value !== null)
+        td.innerHTML =
+          '<div title="' +
+          td.innerHTML +
+          '">' +
+          Array.from(td.innerHTML)[0] +
+          "</div>";
+    }
+  );
 
-    td.innerHTML = Number(val_scaled).toPrecision(precision) + unit_str;
-    // If rounding instead of significant figures is desired, replace whith this:
-    // td.innerHTML = Number(value).toFixed(precision) + unit_str;
-  }
+  Handsontable.renderers.registerRenderer(
+    "eqRender",
+    function (hot, td, row, col, prop, value) {
+      Handsontable.renderers.TextRenderer.apply(this, arguments);
+      sigFigRenderHelper(td, value, 4);
+    }
+  );
+
+  Handsontable.renderers.registerRenderer(
+    "amountRender",
+    function (hot, td, row, col, prop, value) {
+      Handsontable.renderers.TextRenderer.apply(this, arguments);
+      sigFigRenderHelper(td, value, 4, ["μmol", "mmol", "mol"]);
+    }
+  );
+
+  Handsontable.renderers.registerRenderer(
+    "mwRender",
+    function (hot, td, row, col, prop, value) {
+      Handsontable.renderers.TextRenderer.apply(this, arguments);
+      sigFigRenderHelper(td, value, 4, "g/mol");
+    }
+  );
+
+  Handsontable.renderers.registerRenderer(
+    "densityRender",
+    function (hot, td, row, col, prop, value) {
+      Handsontable.renderers.TextRenderer.apply(this, arguments);
+      sigFigRenderHelper(td, value, 4, "g/cm³");
+    }
+  );
+
+  Handsontable.renderers.registerRenderer(
+    "massRender",
+    function (hot, td, row, col, prop, value) {
+      Handsontable.renderers.TextRenderer.apply(this, arguments);
+      sigFigRenderHelper(td, value, 4, ["mg", "g", "kg"]);
+    }
+  );
+
+  Handsontable.renderers.registerRenderer(
+    "volumeRender",
+    function (hot, td, row, col, prop, value) {
+      Handsontable.renderers.TextRenderer.apply(this, arguments);
+      sigFigRenderHelper(td, value, 4, ["μL", "mL", "L"]);
+    }
+  );
+
+  /* Make link clickable and open in new Tab.
+   * rel="..." is needed for security reasons
+   */
+  Handsontable.renderers.registerRenderer(
+    "linkRender",
+    function (hot, td, row, col, prop, value) {
+      Handsontable.renderers.TextRenderer.apply(this, arguments);
+      if (value !== undefined && value !== null) {
+        td.innerHTML =
+          '<a href="' +
+          td.innerHTML +
+          '" target="_blank" rel="noreferrer noopener">PubChem</a>';
+      }
+    }
+  );
 }
-
-Handsontable.renderers.registerRenderer(
-  "eqRender",
-  function (hot, td, row, col, prop, value) {
-    Handsontable.renderers.TextRenderer.apply(this, arguments);
-    sigFigRenderHelper(td, value, 4);
-  }
-);
-
-Handsontable.renderers.registerRenderer(
-  "amountRender",
-  function (hot, td, row, col, prop, value) {
-    Handsontable.renderers.TextRenderer.apply(this, arguments);
-    sigFigRenderHelper(td, value, 4, ["μmol", "mmol", "mol"]);
-  }
-);
-
-Handsontable.renderers.registerRenderer(
-  "mwRender",
-  function (hot, td, row, col, prop, value) {
-    Handsontable.renderers.TextRenderer.apply(this, arguments);
-    sigFigRenderHelper(td, value, 4, "g/mol");
-  }
-);
-
-Handsontable.renderers.registerRenderer(
-  "densityRender",
-  function (hot, td, row, col, prop, value) {
-    Handsontable.renderers.TextRenderer.apply(this, arguments);
-    sigFigRenderHelper(td, value, 4, "g/cm³");
-  }
-);
-
-Handsontable.renderers.registerRenderer(
-  "massRender",
-  function (hot, td, row, col, prop, value) {
-    Handsontable.renderers.TextRenderer.apply(this, arguments);
-    sigFigRenderHelper(td, value, 4, ["mg", "g", "kg"]);
-  }
-);
-
-Handsontable.renderers.registerRenderer(
-  "volumeRender",
-  function (hot, td, row, col, prop, value) {
-    Handsontable.renderers.TextRenderer.apply(this, arguments);
-    sigFigRenderHelper(td, value, 4, ["μL", "mL", "L"]);
-  }
-);
+initHandsontableRenderer();
 
 const col = {
   Status: {
@@ -131,6 +147,7 @@ const col = {
     },
   },
   Search: { prop: "search", name: "Search", settings: {} },
+  Name: { prop: "id.Name", name: "Name", settings: {} },
   Amount: {
     prop: "amount",
     name: "Amount",
@@ -149,7 +166,6 @@ const col = {
   },
 
   CAS: { prop: "id.CAS", name: "CAS", settings: {} },
-  Name: { prop: "id.Name", name: "Name", settings: {} },
   CID: { prop: "id.CID", name: "CID", settings: {} },
   SMILES: { prop: "id.SMILES", name: "SMILES", settings: {} },
   InChIKey: { prop: "id.InChIKey", name: "InChIKey", settings: {} },
@@ -181,7 +197,11 @@ const col = {
     name: "Source",
     settings: { readOnly: true, renderer: "linkRender" },
   },
-  Highlight: { prop: "highlight", name: "", settings: { readOnly: true } },
+  Highlight: {
+    prop: "highlight",
+    name: "",
+    settings: { readOnly: true },
+  },
 };
 Object.keys(col).forEach((key) => (col[key].settings.data = col[key].prop));
 Object.keys(col).forEach((key, i) => (col[key].idx = i));
@@ -213,25 +233,11 @@ const settings = {
   colHeaders: Object.values(col).map((val) => val.name),
   columns: Object.values(col).map((val) => val.settings),
   hiddenColumns: {
-    columns: [
-      col.Name.idx,
-      col.CID.idx,
-      col.SMILES.idx,
-      col.InChIKey.idx,
-      col.InChI.idx,
-      col.Highlight.idx,
-    ],
     copyPasteEnabled: false,
   },
 
   // general
-  contextMenu: [
-    "row_above",
-    "row_below",
-    "remove_row",
-    // "hidden_columns_hide",
-    // "hidden_columns_show",
-  ],
+  contextMenu: ["row_above", "row_below", "remove_row"],
   persistentState: true,
   licenseKey: "non-commercial-and-evaluation",
 };
@@ -243,7 +249,7 @@ function getEQRefRow(hot) {
 function redrawSearchState(hot, row) {
   const cells = hot.getDataAtRowProp(row, col.Highlight.prop).split(",");
   cells.forEach((cell) => {
-    if (cell >= 0 && cell !== null)
+    if (cell >= 0 && cell !== null && cell !== "")
       hot.setCellMeta(row, Number(cell), "className", "search-bg");
   });
 }
@@ -272,7 +278,7 @@ function delSearchHighlight(hot, row, cell) {
   hot.setDataAtRowProp(
     row,
     col.Highlight.prop,
-    hot.getDataAtRowProp(row, col.Highlight.prop).replaceAll(cell, ""),
+    hot.getDataAtRowProp(row, col.Highlight.prop)?.replaceAll(cell, ""),
     "setHighlight"
   );
 }
@@ -529,36 +535,63 @@ function addHooks(hot, db) {
   Handsontable.hooks.add("afterRemoveRow", afterRemoveRow, hot);
 }
 
-function setupViews(table) {
+function initViews(table) {
   const button = document.getElementById("viewState-button");
-  const cols = [
-    col.Name.idx,
-    col.CID.idx,
-    col.SMILES.idx,
-    col.InChIKey.idx,
-    col.InChI.idx,
-  ];
-  table._viewState = true;
+  const views = (() => {
+    const minimal = [
+      col.Name.idx,
+      col.Amount.idx,
+      col.EQ.idx,
+      col.MW.idx,
+      col.Mass.idx,
+      col.Volume.idx,
+    ];
+    const standard = minimal.concat([
+      col.Status.idx,
+      col.Type.idx,
+      col.Search.idx,
+      col.EQRef.idx,
+      col.CAS.idx,
+      col.Density.idx,
+      col.Notes.idx,
+      col.Source.idx,
+    ]);
+    const extended = standard.concat([
+      col.CID.idx,
+      col.SMILES.idx,
+      col.InChIKey.idx,
+      col.InChI.idx,
+    ]);
+    console.log("preret");
+    return {
+      Minimal: minimal,
+      Standard: standard,
+      Extended: extended,
+      All: Object.values(col).map((v) => v.idx),
+    };
+  })();
+  console.log(views);
+  table._viewState = "Standard";
 
-  table.setViewState = ((table) =>
-    function (state) {
-      if (state) {
-        table.hot.getPlugin("hiddenColumns").hideColumns(cols);
-        button.innerHTML = "View: CAS only";
-      } else {
-        table.hot.getPlugin("hiddenColumns").showColumns(cols);
-        button.innerHTML = "View: All IDs";
-      }
+  table.setView = ((table) =>
+    function (viewName) {
+      table.hot.getPlugin("hiddenColumns").hideColumns(views.All);
+      table.hot.getPlugin("hiddenColumns").showColumns(views[viewName]);
       table.hot.render();
-      table._viewState = state;
+
+      table._viewState = viewName;
+      button.innerHTML = "View: " + viewName;
     })(table);
 
-  table.toggleViewState = ((table) =>
+  table.nextView = ((table) =>
     function () {
-      table.setViewState(!table._viewState);
+      if (table._viewState == "Standard") table.setView("Minimal");
+      else if (table._viewState == "Minimal") table.setView("Extended");
+      else if (table._viewState == "Extended") table.setView("Standard");
     })(table);
 
-  button.onclick = table.toggleViewState;
+  table.setView("Standard");
+  button.onclick = table.nextView;
 }
 
 function rerender(hot) {
@@ -586,7 +619,7 @@ export default class Table {
     });
 
     addHooks(this.hot, this.db);
-    setupViews(this);
+    initViews(this);
     this.hot.setDataAtRowProp([
       [0, col.EQRef.prop, true],
       [0, col.Type.prop, "[auto]"],
@@ -606,7 +639,7 @@ export default class Table {
       for (let i = 0; i < this.hot.countSourceRows(); i++) {
         redrawSearchState(this.hot, i);
       }
-      this.setViewState(data[1]);
+      this.setView(data[1]);
     } catch {
       () => {};
     }

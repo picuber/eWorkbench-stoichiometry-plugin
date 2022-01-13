@@ -247,8 +247,8 @@ function getEQRefRow(hot) {
 }
 
 function redrawSearchState(hot, row) {
-  const cells = hot.getDataAtRowProp(row, col.Highlight.prop).split(",");
-  cells.forEach((cell) => {
+  const cells = hot.getDataAtRowProp(row, col.Highlight.prop)?.split(",");
+  cells?.forEach((cell) => {
     if (cell >= 0 && cell !== null && cell !== "")
       hot.setCellMeta(row, Number(cell), "className", "search-bg");
   });
@@ -636,7 +636,7 @@ export default class Table {
     try {
       const data = JSON.parse(tableData);
       this.hot.loadData(data[0]);
-      for (let i = 0; i < this.hot.countSourceRows(); i++) {
+      for (let i = 0; i < this.hot.countSourceRows() - 1; i++) {
         redrawSearchState(this.hot, i);
       }
       this.setView(data[1]);
@@ -646,6 +646,7 @@ export default class Table {
   }
 
   exportImage(callback) {
+    this.setView("Minimal");
     rerender(this.hot);
     return html2canvas(document.getElementById("table"), {
       width: document.getElementsByClassName("ht_clone_top")[0].clientWidth,

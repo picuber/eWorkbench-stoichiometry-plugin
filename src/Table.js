@@ -3,6 +3,10 @@ import Handsontable from "handsontable";
 import "handsontable/dist/handsontable.full.css";
 import html2canvas from "html2canvas";
 
+////////////////////////////////////////////////////////////////////////
+//                           Configuration                            //
+////////////////////////////////////////////////////////////////////////
+
 /**
  * Adds a Validator to the Table that checks if the value is positive or
  * (intentionally) emyty
@@ -11,6 +15,10 @@ Handsontable.validators.registerValidator("positive", (value, cb) =>
   cb(value > 0 || value === null || value === "N/A")
 );
 
+/**
+ * Initialises and registers the custom cell renderers for handsontable so
+ * that they can be used in the configuration
+ */
 function initHandsontableRenderer() {
   // ronud the number to a specified precision of significant figures
   function sigFigRenderHelper(td, value, precision, unit) {
@@ -29,7 +37,7 @@ function initHandsontableRenderer() {
           if (value < 1) return [value * 1000, unit[0]];
           else if (value < 1000) return [value, unit[1]];
           else return [value / 1000, unit[2]];
-        } else return [value, ""];
+        } else return [value, ""]; // no units or wrong format -> just get value
       })(value, unit);
 
       td.innerHTML = Number(val_scaled).toPrecision(precision) + unit_str;
@@ -121,6 +129,14 @@ function initHandsontableRenderer() {
 }
 initHandsontableRenderer();
 
+/**
+ *  configuration for the order, structure and settings of the columns in the
+ *  table. Each entry has the following properties
+ *  - prop {string} (required) - the key for the data objects to fill the cell with, also used with some HoT functions
+ *  - defaultValue {any} (optional) - the default value for new/empty rows
+ *  - name {string} (required) - the header name for the column
+ *  - settings {object} (required) - configuration optinos for the column according to Handsontable
+ */
 const col = {
   Status: {
     prop: "status",
@@ -175,7 +191,7 @@ const col = {
     prop: "prop.mw",
     name: "MW",
     settings: { validator: "positive", renderer: "mwRender" },
-  }, //molecular weight, format: x g/mol
+  },
   Density: {
     prop: "prop.density",
     name: "Density",
@@ -203,10 +219,16 @@ const col = {
     settings: { readOnly: true },
   },
 };
+/* Copy the prop into the HoT settings object, add the column index for easier
+ * reference and flexibility and make the object immutable
+ */
 Object.keys(col).forEach((key) => (col[key].settings.data = col[key].prop));
 Object.keys(col).forEach((key, i) => (col[key].idx = i));
 Object.freeze(col);
 
+/* Construct the dataSchema for the HoT configuration from the col object.
+ * They can either have the form "prop" or "prop.subprob"
+ */
 const schema = {};
 Object.keys(col).forEach((key) => {
   const [fst, snd] = col[key].prop.split(".");
@@ -218,6 +240,9 @@ Object.keys(col).forEach((key) => {
   }
 });
 
+/* The Handsontable settings object. See their [Docs](https://handsontable.com/docs/)
+ * for more information
+ */
 const settings = {
   data: [{}],
   dataSchema: schema,
@@ -242,9 +267,20 @@ const settings = {
   licenseKey: "non-commercial-and-evaluation",
 };
 
+////////////////////////////////////////////////////////////////////////
+//                         Utility Functions                          //
+////////////////////////////////////////////////////////////////////////
+
+/* Gets the row index of the equivalent reference row.
+ * If none are set, return -1
+ */
 function getEQRefRow(hot) {
   return hot.getDataAtProp(col.EQRef.prop).indexOf(true);
 }
+
+/////////////////
+//  Highlight  //
+/////////////////
 
 function redrawSearchState(hot, row) {
   const cells = hot.getDataAtRowProp(row, col.Highlight.prop)?.split(",");
@@ -283,6 +319,13 @@ function delSearchHighlight(hot, row, cell) {
   );
 }
 
+///////////////////////
+//  Hook helpers     //
+///////////////////////
+
+/* (Re-)Calculate the mass and volume from the amount, molecular weight, and
+ * density, if they are defined (mass needs amount and mw, volume needs all three)
+ */
 function updateProperties(hot, row) {
   const source = "updateProperties";
 
@@ -292,20 +335,19 @@ function updateProperties(hot, row) {
 
   if (amount > 0 && mw > 0) {
     // Mass[g] = Amount[mmol] * MolecularWeight[g/mol] / 1000
-    hot.setDataAtRowProp(row, col.Mass.prop, (amount * mw) / 1000, source);
+    const mass = (amount * mw) / 1000;
+    hot.setDataAtRowProp(row, col.Mass.prop, mass, source);
   }
 
   if (amount > 0 && mw > 0 && density > 0) {
     // Volume[mL = cm³] = (Amount[mmol] * MolecularWeight[g/mol]) / (Density[g/cm³] * 1000)
-    hot.setDataAtRowProp(
-      row,
-      col.Volume.prop,
-      (amount * mw) / (density * 1000),
-      source
-    );
+    const volume = (amount * mw) / (density * 1000);
+    hot.setDataAtRowProp(row, col.Volume.prop, volume, source);
   }
 }
 
+/* (Re-)Calculate the Amount, when the mass or volume change.
+ */
 function updateAmount(hot, row, prop, val) {
   const source = "updateAmount";
 
@@ -314,16 +356,13 @@ function updateAmount(hot, row, prop, val) {
 
   if (prop === col.Mass.prop && val > 0 && mw > 0) {
     //  Amount[mmol] = (Mass[g] * 1000) / MolecularWeight[g/mol]
-    hot.setDataAtRowProp(row, col.Amount.prop, (val * 1000) / mw, source);
+    const amount = (val * 1000) / mw;
+    hot.setDataAtRowProp(row, col.Amount.prop, amount, source);
   }
   if (prop === col.Volume.prop && density > 0 && val > 0 && mw > 0) {
     // Amount[mmol] = (Density[g/cm³] * Volume[mL = cm³] * 1000) / MolecularWeight[g/mol]
-    hot.setDataAtRowProp(
-      row,
-      col.Amount.prop,
-      (density * val * 1000) / mw,
-      source
-    );
+    const amount = (density * val * 1000) / mw;
+    hot.setDataAtRowProp(row, col.Amount.prop, amount, source);
   }
   if (prop === col.Volume.prop && density <= 0) {
     // If no density is known, volume is not applicable
@@ -331,6 +370,8 @@ function updateAmount(hot, row, prop, val) {
   }
 }
 
+/*
+ */
 function updateEQs(hot, row, prop, val) {
   const source = "updateEQs";
 
@@ -570,7 +611,6 @@ function initViews(table) {
       All: Object.values(col).map((v) => v.idx),
     };
   })();
-  console.log(views);
   table._viewState = "Standard";
 
   table.setView = ((table) =>
@@ -592,14 +632,6 @@ function initViews(table) {
 
   table.setView("Standard");
   button.onclick = table.nextView;
-}
-
-function rerender(hot) {
-  hot.setDataAtRowProp(
-    0,
-    col.Notes.prop,
-    hot.getDataAtRowProp(0, col.Notes.prop)
-  );
 }
 
 export default class Table {
@@ -647,7 +679,6 @@ export default class Table {
 
   exportImage(callback) {
     this.setView("Minimal");
-    rerender(this.hot);
     return html2canvas(document.getElementById("table"), {
       width: document.getElementsByClassName("ht_clone_top")[0].clientWidth,
     }).then((canvas) => canvas.toBlob(callback));

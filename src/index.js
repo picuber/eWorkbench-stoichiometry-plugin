@@ -57,5 +57,13 @@ document.getElementById("test_parser").onclick = function () {
  * Tests the Export and Display of the preview image
  */
 document.getElementById("test_image").onclick = function () {
-  plugin.table.exportImage();
+  plugin.table.exportImage((blob) => {
+    const div = document.createElement("div");
+    const img = document.createElement("img");
+
+    img.src = URL.createObjectURL(blob);
+
+    div.appendChild(img);
+    document.body.appendChild(div);
+  });
 };

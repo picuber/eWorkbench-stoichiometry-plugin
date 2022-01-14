@@ -38,3 +38,12 @@ export function showTechInfo(auth) {
   techInfo.getElementsByClassName("pk")[0].innerHTML = auth.pk;
   techInfo.getElementsByClassName("apiBaseUrl")[0].innerHTML = auth.apiBaseUrl;
 }
+
+export function rerender(hot) {
+  const col = {}; // dummy
+  hot.setDataAtRowProp(
+    0,
+    col.Notes.prop,
+    hot.getDataAtRowProp(0, col.Notes.prop)
+  );
+}

@@ -73,7 +73,6 @@ export default class PubChem {
    * Creates a new PubChem instance with its own RateLimiter and Parser
    */
   constructor() {
-    console.log("Hello PubChem");
     this.prolog_rest = "https://pubchem.ncbi.nlm.nih.gov/rest/pug";
     this.prolog_view = "https://pubchem.ncbi.nlm.nih.gov/rest/pug_view";
     this.ratelimit = new RateLimit(200); // 5 times every second in ms

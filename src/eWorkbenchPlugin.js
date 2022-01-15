@@ -71,7 +71,6 @@ function sendForm(formData, auth) {
 
 export default class Plugin {
   constructor() {
-    console.log("Hello Plugin");
     const locationData = parseLocation();
     this.auth = {
       apiBaseUrl: decodeURIComponent(locationData.apiBaseUrl),

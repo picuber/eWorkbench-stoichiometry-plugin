@@ -27,6 +27,7 @@ export default class Table {
 
     init.hooks(Handsontable, this.hot, this.db);
     init.views(this);
+    init.prescision(this);
     this.hot.setDataAtRowProp([
       [0, col.EQRef.prop, true],
       [0, col.Type.prop, "[auto]"],
@@ -52,7 +53,6 @@ export default class Table {
   }
 
   exportImage(callback) {
-    this.setView("Minimal");
     return html2canvas(document.getElementById("table"), {
       width: document.getElementsByClassName("ht_clone_top")[0].clientWidth,
     }).then((canvas) => canvas.toBlob(callback));

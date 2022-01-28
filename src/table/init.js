@@ -1,4 +1,4 @@
-import { viewArr } from "./constants.js";
+import { col, viewArr } from "./constants.js";
 import { afterChange, afterRemoveRow } from "./hooks.js";
 
 /**
@@ -18,29 +18,40 @@ export function validators(Handsontable) {
  * that they can be used in the configuration
  */
 export function renderers(Handsontable) {
-  // ronud the number to a specified precision of significant figures
-  function sigFigRenderHelper(td, value, precision, unit) {
-    if (value > 0) {
-      let val_scaled, unit_str;
-      [val_scaled, unit_str] = ((value, unit) => {
-        if (typeof unit === "string") {
-          // if only one (or no) unit is given, just return as is
-          return [value, " " + unit];
-        } else if (Array.isArray(unit) && unit.length === 3) {
-          /* if multiple (=3) units are given, scale to the correct order of
-           * magnitude, so that the number shows between 1 and 1000 if possible
-           * The middle unit (unit[1]) is the base unit, with which the value
-           * has to be entered
-           */
-          if (value < 1) return [value * 1000, unit[0]];
-          else if (value < 1000) return [value, unit[1]];
-          else return [value / 1000, unit[2]];
-        } else return [value, ""]; // no units or wrong format -> just get value
-      })(value, unit);
+  /* Scale the Value according to the unit format:
+   * - one given unit: don't scale
+   * - three given unit: scale such that 1 <= value < 1000, if possible.
+   *    the middle unit is the base (= "input") unit
+   * - else: return without (with empty) unit
+   */
+  function scaleValue(value, unit) {
+    // one unit
+    if (typeof unit === "string") return { val: value, unit: " " + unit };
 
-      td.innerHTML = Number(val_scaled).toPrecision(precision) + unit_str;
-      // If rounding instead of significant figures is desired, replace whith this:
-      // td.innerHTML = Number(value).toFixed(precision) + unit_str;
+    // array of three units
+    if (Array.isArray(unit) && unit.length === 3) {
+      if (value < 1) return { val: value * 1000, unit: " " + unit[0] };
+      else if (value < 1000) return { val: value, unit: " " + unit[1] };
+      else return { val: value / 1000, unit: " " + unit[2] };
+    }
+
+    // no units or wrong format
+    return { val: value, unit: "" };
+  }
+
+  // round the number to a specified precision of significant figures
+  function toSigFig(td, value, precision, unit) {
+    if (value > 0) {
+      const scaled = scaleValue(value, unit);
+      td.innerHTML = Number(scaled.val).toPrecision(precision) + scaled.unit;
+    }
+  }
+
+  // round the number to a specified amount of digits after the decimal point
+  function toRounded(td, value, precision, unit) {
+    if (value > 0) {
+      const scaled = scaleValue(value, unit);
+      td.innerHTML = Number(scaled.val).toFixed(precision) + scaled.unit;
     }
   }
 
@@ -65,7 +76,7 @@ export function renderers(Handsontable) {
     "eqRender",
     function (hot, td, row, col, prop, value) {
       Handsontable.renderers.TextRenderer.apply(this, arguments);
-      sigFigRenderHelper(td, value, 4);
+      toSigFig(td, value, hot._$prescision);
     }
   );
 
@@ -73,7 +84,7 @@ export function renderers(Handsontable) {
     "amountRender",
     function (hot, td, row, col, prop, value) {
       Handsontable.renderers.TextRenderer.apply(this, arguments);
-      sigFigRenderHelper(td, value, 4, ["μmol", "mmol", "mol"]);
+      toSigFig(td, value, hot._$prescision, ["μmol", "mmol", "mol"]);
     }
   );
 
@@ -81,7 +92,7 @@ export function renderers(Handsontable) {
     "mwRender",
     function (hot, td, row, col, prop, value) {
       Handsontable.renderers.TextRenderer.apply(this, arguments);
-      sigFigRenderHelper(td, value, 4, "g/mol");
+      toRounded(td, value, 2, "g/mol");
     }
   );
 
@@ -89,7 +100,7 @@ export function renderers(Handsontable) {
     "densityRender",
     function (hot, td, row, col, prop, value) {
       Handsontable.renderers.TextRenderer.apply(this, arguments);
-      sigFigRenderHelper(td, value, 4, "g/cm³");
+      toRounded(td, value, 3, "g/cm³");
     }
   );
 
@@ -97,7 +108,7 @@ export function renderers(Handsontable) {
     "massRender",
     function (hot, td, row, col, prop, value) {
       Handsontable.renderers.TextRenderer.apply(this, arguments);
-      sigFigRenderHelper(td, value, 4, ["mg", "g", "kg"]);
+      toSigFig(td, value, hot._$prescision, ["mg", "g", "kg"]);
     }
   );
 
@@ -105,7 +116,7 @@ export function renderers(Handsontable) {
     "volumeRender",
     function (hot, td, row, col, prop, value) {
       Handsontable.renderers.TextRenderer.apply(this, arguments);
-      sigFigRenderHelper(td, value, 4, ["μL", "mL", "L"]);
+      toSigFig(td, value, hot._$prescision, ["μL", "mL", "L"]);
     }
   );
 
@@ -153,6 +164,42 @@ export function views(table) {
 
   table.setView("Standard");
   button.onclick = table.nextView;
+}
+
+// re-set a cell to fix a render bug for the table header
+function rerender(hot) {
+  const notes = hot.getDataAtRowProp(0, col.Notes.prop);
+  hot.setDataAtRowProp(0, col.Notes.prop, notes);
+}
+
+export function prescision(table) {
+  const button = document.getElementById("prescision-button");
+  table._prescision = 3;
+
+  table.setPrescision = ((table) =>
+    function (prescision) {
+      table._prescision = prescision;
+      const precName = ((prec) => {
+        if (prec === 3) return "Regular";
+        if (prec === 4) return "High";
+        return `${prec} digits`;
+      })(prescision);
+
+      // set prescision in hot instance so that the renderers have access to it
+      table.hot._$prescision = prescision;
+      rerender(table.hot);
+
+      button.innerHTML = "Prescision: " + precName;
+    })(table);
+
+  table.nextPrescision = ((table) =>
+    function () {
+      if (table._prescision === 3) table.setPrescision(4);
+      else if (table._prescision === 4) table.setPrescision(3);
+    })(table);
+
+  table.setPrescision(3);
+  button.onclick = table.nextPrescision;
 }
 
 export function hooks(Handsontable, hot, db) {

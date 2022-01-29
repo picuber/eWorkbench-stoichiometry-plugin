@@ -47,8 +47,14 @@ export default class Table {
         resetHighlight(this.hot, i);
       }
       this.setView(data[1]);
-    } catch {
-      () => {};
+    } catch (e) {
+      if (e instanceof SyntaxError) {
+        //JSON.parse() failed
+        console.error("Could not load save data: Invalid format");
+      } else {
+        //dunno what else went wrong, just throw it back
+        throw e;
+      }
     }
   }
 

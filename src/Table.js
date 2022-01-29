@@ -27,7 +27,7 @@ export default class Table {
 
     init.hooks(Handsontable, this.hot, this.db);
     init.views(this);
-    init.prescision(this);
+    init.precision(this);
     this.hot.setDataAtRowProp([
       [0, col.EQRef.prop, true],
       [0, col.Type.prop, "[auto]"],
@@ -39,7 +39,7 @@ export default class Table {
     return JSON.stringify([
       this.hot.getSourceData(),
       this._viewState,
-      this._prescision,
+      this._precision,
     ]);
   }
 
@@ -51,7 +51,7 @@ export default class Table {
         resetHighlight(this.hot, i);
       }
       this.setView(data[1]);
-      this.setPrescision(data[2]);
+      this.setPrecision(data[2]);
     } catch (e) {
       if (e instanceof SyntaxError) {
         //JSON.parse() failed

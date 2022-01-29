@@ -76,7 +76,7 @@ export function renderers(Handsontable) {
     "eqRender",
     function (hot, td, row, col, prop, value) {
       Handsontable.renderers.TextRenderer.apply(this, arguments);
-      toSigFig(td, value, hot._$prescision);
+      toSigFig(td, value, hot._$precision);
     }
   );
 
@@ -84,7 +84,7 @@ export function renderers(Handsontable) {
     "amountRender",
     function (hot, td, row, col, prop, value) {
       Handsontable.renderers.TextRenderer.apply(this, arguments);
-      toSigFig(td, value, hot._$prescision, ["μmol", "mmol", "mol"]);
+      toSigFig(td, value, hot._$precision, ["μmol", "mmol", "mol"]);
     }
   );
 
@@ -108,7 +108,7 @@ export function renderers(Handsontable) {
     "massRender",
     function (hot, td, row, col, prop, value) {
       Handsontable.renderers.TextRenderer.apply(this, arguments);
-      toSigFig(td, value, hot._$prescision, ["mg", "g", "kg"]);
+      toSigFig(td, value, hot._$precision, ["mg", "g", "kg"]);
     }
   );
 
@@ -116,7 +116,7 @@ export function renderers(Handsontable) {
     "volumeRender",
     function (hot, td, row, col, prop, value) {
       Handsontable.renderers.TextRenderer.apply(this, arguments);
-      toSigFig(td, value, hot._$prescision, ["μL", "mL", "L"]);
+      toSigFig(td, value, hot._$precision, ["μL", "mL", "L"]);
     }
   );
 
@@ -172,34 +172,34 @@ function rerender(hot) {
   hot.setDataAtRowProp(0, col.Notes.prop, notes);
 }
 
-export function prescision(table) {
-  const button = document.getElementById("prescision-button");
-  table._prescision = 3;
+export function precision(table) {
+  const button = document.getElementById("precision-button");
+  table._precision = 3;
 
-  table.setPrescision = ((table) =>
-    function (prescision) {
-      table._prescision = prescision;
+  table.setPrecision = ((table) =>
+    function (precision) {
+      table._precision = precision;
       const precName = ((prec) => {
         if (prec === 3) return "Regular";
         if (prec === 4) return "High";
         return `${prec} digits`;
-      })(prescision);
+      })(precision);
 
-      // set prescision in hot instance so that the renderers have access to it
-      table.hot._$prescision = prescision;
+      // set precision in hot instance so that the renderers have access to it
+      table.hot._$precision = precision;
       rerender(table.hot);
 
-      button.innerHTML = "Prescision: " + precName;
+      button.innerHTML = "Precision: " + precName;
     })(table);
 
-  table.nextPrescision = ((table) =>
+  table.nextPrecision = ((table) =>
     function () {
-      if (table._prescision === 3) table.setPrescision(4);
-      else if (table._prescision === 4) table.setPrescision(3);
+      if (table._precision === 3) table.setPrecision(4);
+      else if (table._precision === 4) table.setPrecision(3);
     })(table);
 
-  table.setPrescision(3);
-  button.onclick = table.nextPrescision;
+  table.setPrecision(3);
+  button.onclick = table.nextPrecision;
 }
 
 export function hooks(Handsontable, hot, db) {

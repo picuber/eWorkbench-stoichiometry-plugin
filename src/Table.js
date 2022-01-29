@@ -36,7 +36,11 @@ export default class Table {
   }
 
   getData() {
-    return JSON.stringify([this.hot.getSourceData(), this._viewState]);
+    return JSON.stringify([
+      this.hot.getSourceData(),
+      this._viewState,
+      this._prescision,
+    ]);
   }
 
   loadData(tableData) {
@@ -47,6 +51,7 @@ export default class Table {
         resetHighlight(this.hot, i);
       }
       this.setView(data[1]);
+      this.setPrescision(data[2]);
     } catch (e) {
       if (e instanceof SyntaxError) {
         //JSON.parse() failed

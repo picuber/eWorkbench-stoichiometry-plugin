@@ -1,4 +1,5 @@
-/** *  configuration for the order, structure and settings of the columns in the
+/**
+ *  configuration for the order, structure and settings of the columns in the
  *  table. Each entry has the following properties
  *  - prop {string} (required) - the key for the data objects to fill the cell with, also used with some HoT functions
  *  - defaultValue {any} (optional) - the default value for new/empty rows

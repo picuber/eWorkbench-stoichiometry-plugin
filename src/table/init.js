@@ -81,6 +81,15 @@ export function renderers(Handsontable) {
   );
 
   Handsontable.renderers.registerRenderer(
+    "molarityRender",
+    function (hot, td, row, col, prop, value) {
+      Handsontable.renderers.TextRenderer.apply(this, arguments);
+      const molarityUnit = '<span style="font-variant: small-caps;">m</span>';
+      toRounded(td, value, 2, molarityUnit);
+    }
+  );
+
+  Handsontable.renderers.registerRenderer(
     "amountRender",
     function (hot, td, row, col, prop, value) {
       Handsontable.renderers.TextRenderer.apply(this, arguments);
@@ -157,9 +166,10 @@ export function views(table) {
 
   table.nextView = ((table) =>
     function () {
-      if (table._viewState == "Standard") table.setView("Minimal");
-      else if (table._viewState == "Minimal") table.setView("Extended");
-      else if (table._viewState == "Extended") table.setView("Standard");
+      if (table._viewState == "Standard") table.setView("Extended");
+      else if (table._viewState == "Extended") table.setView("Minimal");
+      else if (table._viewState == "Minimal") table.setView("Standard");
+      else table.setView("Standard"); // if invalid view, reset
     })(table);
 
   table.setView("Standard");
@@ -196,6 +206,7 @@ export function precision(table) {
     function () {
       if (table._precision === 3) table.setPrecision(4);
       else if (table._precision === 4) table.setPrecision(3);
+      else table.setPrecision(3); // if invalid prescision, reset
     })(table);
 
   table.setPrecision(3);

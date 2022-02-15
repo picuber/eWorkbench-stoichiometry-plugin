@@ -1,5 +1,4 @@
-/**
- *  configuration for the order, structure and settings of the columns in the
+/** *  configuration for the order, structure and settings of the columns in the
  *  table. Each entry has the following properties
  *  - prop {string} (required) - the key for the data objects to fill the cell with, also used with some HoT functions
  *  - defaultValue {any} (optional) - the default value for new/empty rows
@@ -48,6 +47,11 @@ export const col = {
     defaultValue: false,
     name: "EqRef",
     settings: { type: "checkbox" },
+  },
+  Molarity: {
+    prop: "molarity",
+    name: "Molarity",
+    settings: { validator: "positive", renderer: "molarityRender" },
   },
 
   CAS: { prop: "id.CAS", name: "CAS", settings: {} },
@@ -153,7 +157,7 @@ export const propArr = {
     props.Density,
     props.Source,
   ],
-  AMD: [props.Amount, props.MW, props.Density],
+  AMMD: [props.Amount, props.Molarity, props.MW, props.Density],
   VM: [props.Mass, props.Volume],
   AEE: [props.Amount, props.EQ, props.EQRef],
 };
@@ -189,6 +193,7 @@ const view_standard = view_minimal.concat([
   col.Type.idx,
   col.Search.idx,
   col.EQRef.idx,
+  col.Molarity.idx,
   col.CAS.idx,
   col.Density.idx,
   col.Notes.idx,

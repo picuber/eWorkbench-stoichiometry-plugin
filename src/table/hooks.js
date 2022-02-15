@@ -91,6 +91,7 @@ function updateProperties(hot, row) {
   const source = "updateProperties";
 
   const amount = hot.getDataAtRowProp(row, props.Amount);
+  const molarity = hot.getDataAtRowProp(row, props.Molarity);
   const mw = hot.getDataAtRowProp(row, props.MW);
   const density = hot.getDataAtRowProp(row, props.Density);
 
@@ -98,6 +99,13 @@ function updateProperties(hot, row) {
     // Mass[g] = Amount[mmol] * MolecularWeight[g/mol] / 1000
     const mass = (amount * mw) / 1000;
     hot.setDataAtRowProp(row, props.Mass, mass, source);
+  }
+
+  if (amount > 0 && molarity > 0) {
+    // Volume[mL] = Amonut[mmol] / Molarity[mol/L]
+    const volume = amount / molarity;
+    hot.setDataAtRowProp(row, props.Volume, volume, source);
+    return; // if molarity exists, ignore density
   }
 
   if (amount > 0 && mw > 0 && density > 0) {
@@ -112,6 +120,7 @@ function updateProperties(hot, row) {
 function updateAmount(hot, row, prop, val) {
   const source = "updateAmount";
 
+  const molarity = hot.getDataAtRowProp(row, props.Molarity);
   const mw = hot.getDataAtRowProp(row, props.MW);
   const density = hot.getDataAtRowProp(row, props.Density);
 
@@ -119,6 +128,12 @@ function updateAmount(hot, row, prop, val) {
     //  Amount[mmol] = (Mass[g] * 1000) / MolecularWeight[g/mol]
     const amount = (val * 1000) / mw;
     hot.setDataAtRowProp(row, props.Amount, amount, source);
+  }
+  if (prop === props.Volume && molarity > 0 && val > 0) {
+    // Amount[mmol] = Molarity[mol/L] * Volume[mL]
+    const amount = molarity * val;
+    hot.setDataAtRowProp(row, props.Amount, amount, source);
+    return; // if molarity exists, ignore density
   }
   if (prop === props.Volume && density > 0 && val > 0 && mw > 0) {
     // Amount[mmol] = (Density[g/cm³] * Volume[mL = cm³] * 1000) / MolecularWeight[g/mol]
@@ -201,7 +216,7 @@ function updateEQRef(hot, row) {
  *  searchLock: {Type} => {Status}
  *  searchFill: {Search} => { <search_result> }
  *  setHighlight: { <search_result> } => {Highlight}
- *  updateProperties: {Amount, MW, Density} => {Mass, Volume}
+ *  updateProperties: {Amount, Molarity, MW, Density} => {Mass, Volume}
  *  updateAmount: {Mass, Volume} => Amount
  *  EQRefUpdate: {EQRef} => {EQRef}
  *  updateEQs: {Amount, EQRef, EQ} => {Amount, EQ}
@@ -223,7 +238,7 @@ export const afterChange = (hot, db) => (changes, source) => {
       resetHighlight(hot, row);
 
     if (prop == props.MW && source === "searchFill") updateProperties(hot, row);
-    if (propArr.AMD.includes(prop))
+    if (propArr.AMMD.includes(prop))
       if (source !== "searchFill" && source !== "updateAmount")
         updateProperties(hot, row);
 

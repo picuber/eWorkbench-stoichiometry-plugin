@@ -5,8 +5,12 @@ import { props, propArr, idxArr } from "./constants.js";
  */
 const getEQRefRow = (hot) => hot.getDataAtProp(props.EQRef).indexOf(true);
 
-function setSearchLock(hot, row, newValue) {
-  const source = "searchLock";
+function setTypeStatus(hot, row, newValue) {
+  const source = "setTypeStatus";
+
+  if ((newValue === null) | (newValue === undefined)) {
+    hot.setDataAtRowProp(row, props.Type, "[auto]", source);
+  }
 
   if (newValue === "[locked]")
     hot.setDataAtRowProp(row, props.Status, "\u{1F512}Locked", source);
@@ -113,6 +117,10 @@ function updateProperties(hot, row) {
     const volume = (amount * mw) / (density * 1000);
     hot.setDataAtRowProp(row, props.Volume, volume, source);
   }
+
+  if (density === "N/A") {
+    hot.setDataAtRowProp(row, props.Volume, "N/A", source);
+  }
 }
 
 /* (Re-)Calculate the Amount, when the mass or volume change.
@@ -140,7 +148,7 @@ function updateAmount(hot, row, prop, val) {
     const amount = (density * val * 1000) / mw;
     hot.setDataAtRowProp(row, props.Amount, amount, source);
   }
-  if (prop === props.Volume && density <= 0) {
+  if (prop === props.Volume && density === "N/A") {
     // If no density is known, volume is not applicable
     hot.setDataAtRowProp(row, props.Volume, "N/A");
   }
@@ -198,8 +206,13 @@ function updateEQs(hot, row, prop, val) {
   }
 }
 
-function updateEQRef(hot, row) {
+function updateEQRef(hot, row, oldValue, newValue) {
   const source = "EQRefUpdate";
+
+  if (newValue === null) {
+    hot.setDataAtRowProp(row, props.EQRef, oldValue, source);
+    return;
+  }
 
   // Don't touch last row to avoid creating a new one (should be false anyway)
   const len = { length: hot.countRows() - 1 };
@@ -213,11 +226,11 @@ function updateEQRef(hot, row) {
 }
 
 /* Soruces flow:
- *  searchLock: {Type} => {Status}
+ *  setTypeStatus: {Type} => {Status}
  *  searchFill: {Search} => { <search_result> }
  *  setHighlight: { <search_result> } => {Highlight}
  *  updateProperties: {Amount, Molarity, MW, Density} => {Mass, Volume}
- *  updateAmount: {Mass, Volume} => Amount
+ *  updateAmount: {Mass, Volume} => Amount, {Volume} => Volume
  *  EQRefUpdate: {EQRef} => {EQRef}
  *  updateEQs: {Amount, EQRef, EQ} => {Amount, EQ}
  */
@@ -227,7 +240,8 @@ export const afterChange = (hot, db) => (changes, source) => {
     // If nothing changed don't do anything
     if (oldValue === newValue) return;
 
-    if (prop === props.Type) setSearchLock(hot, row, newValue);
+    if (prop === props.Type && source != "setTypeStatus")
+      setTypeStatus(hot, row, newValue);
 
     if (prop === props.Search) search(hot, db, row, newValue);
 
@@ -246,7 +260,8 @@ export const afterChange = (hot, db) => (changes, source) => {
       if (source !== "searchFill" && source !== "updateProperties")
         updateAmount(hot, row, prop, newValue);
 
-    if (prop === props.EQRef && source !== "EQRefUpdate") updateEQRef(hot, row);
+    if (prop === props.EQRef && source !== "EQRefUpdate")
+      updateEQRef(hot, row, oldValue, newValue);
 
     if (propArr.AEE.includes(prop) && source !== "updateEQs")
       updateEQs(hot, row, prop, newValue);

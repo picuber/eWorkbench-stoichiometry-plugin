@@ -85,7 +85,7 @@ export const col = {
   Source: {
     prop: "source",
     name: "Source",
-    settings: { readOnly: true, renderer: "linkRender" },
+    settings: { renderer: "linkRender" },
   },
   Highlight: {
     prop: "highlight",

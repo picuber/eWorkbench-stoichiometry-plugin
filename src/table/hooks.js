@@ -106,7 +106,7 @@ function updateProperties(hot, row) {
   }
 
   if (amount > 0 && molarity > 0) {
-    // Volume[mL] = Amonut[mmol] / Molarity[mol/L]
+    // Volume[mL] = Amount[mmol] / Molarity[mol/L]
     const volume = amount / molarity;
     hot.setDataAtRowProp(row, props.Volume, volume, source);
     return; // if molarity exists, ignore density

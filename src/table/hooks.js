@@ -5,6 +5,14 @@ import { props, propArr, idxArr } from "./constants.js";
  */
 const getEQRefRow = (hot) => hot.getDataAtProp(props.EQRef).indexOf(true);
 
+function deleteOnlySource(hot, row, oldValue, newValue, triggerSource) {
+  const source = "deleteOnly";
+  if (triggerSource === "edit" && newValue !== null) {
+    hot.setDataAtRowProp(row, props.Source, oldValue, source);
+    return;
+  }
+}
+
 function setTypeStatus(hot, row, newValue) {
   const source = "setTypeStatus";
 
@@ -239,6 +247,11 @@ export const afterChange = (hot, db) => (changes, source) => {
   changes?.forEach(([row, prop, oldValue, newValue]) => {
     // If nothing changed don't do anything
     if (oldValue === newValue) return;
+
+    if (prop === props.Source) {
+      deleteOnlySource(hot, row, oldValue, newValue, source);
+      return;
+    }
 
     if (prop === props.Type && source != "setTypeStatus")
       setTypeStatus(hot, row, newValue);

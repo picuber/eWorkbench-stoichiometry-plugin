@@ -1,10 +1,8 @@
+# personal notes
 notes
 
-# node JS
+# node modules
 node_modules
 
-package-lock.json
+# compiled files
 dist
-# JSDoc
-out
-docs

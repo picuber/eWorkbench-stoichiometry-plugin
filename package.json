@@ -1,30 +1,28 @@
 {
-  "name": "ansatztool",
+  "name": "eWorkbench-stoichiometry-plugin",
   "version": "1.0.0",
   "description": "",
   "private": true,
-  "directories": {
-    "doc": "docs"
-  },
   "scripts": {
     "start": "webpack serve --mode development",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "webpack --mode production",
-    "docs": "npx jsdoc src/* -d ./docs"
+    "build": "webpack --mode production"
   },
   "keywords": [
     "es6"
   ],
+  "engines": {
+    "node": ">=16"
+  },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/picuber/eWorkbench-Ansatztool.git"
+    "url": "git+https://github.com/picuber/eWorkbench-stoichiometry-plugin.git"
   },
   "author": "picuber",
   "license": "GNU AGPLv3",
   "bugs": {
-    "url": "https://github.com/picuber/eWorkbench-Ansatztool/issues"
+    "url": "https://github.com/picuber/eWorkbench-stoichiometry-plugin/issues"
   },
-  "homepage": "https://github.com/picuber/eWorkbench-Ansatztool#readme",
+  "homepage": "https://github.com/picuber/eWorkbench-stoichiometry-plugin#readme",
   "devDependencies": {
     "@babel/core": "^7.16.7",
     "@babel/preset-env": "^7.16.8",
@@ -39,7 +37,6 @@
     "eslint-webpack-plugin": "^3.1.1",
     "html-webpack-plugin": "^5.5.0",
     "htmlhint": "^1.1.0",
-    "jsdoc": "^3.6.7",
     "mini-css-extract-plugin": "^2.4.6",
     "prettier": "^2.5.1",
     "style-loader": "^3.3.1",
@@ -52,7 +49,6 @@
     "webpack-dev-server": "^4.7.2"
   },
   "dependencies": {
-    "fraction.js": "^4.1.2",
     "handsontable": "^11.0.1",
     "html2canvas": "^1.4.0"
   }

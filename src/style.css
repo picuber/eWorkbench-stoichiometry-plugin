@@ -3,16 +3,6 @@ body {
   background-color: lightgray;
 }
 
-#tech_info table {
-  width: 100%;
-  word-wrap: break-word;
-  border-spacing: 10px;
-}
-
-#tech_info td {
-  max-width: 400px;
-}
-
 .handsontable .search-bg {
   background-color: #DDFFDD;
 }

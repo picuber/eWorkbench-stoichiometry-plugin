@@ -11,6 +11,11 @@ function deleteOnlySource(hot, row, oldValue, newValue, triggerSource) {
     hot.setDataAtRowProp(row, props.Source, oldValue, source);
     return;
   }
+  if (newValue === null) {
+    // delete highlight here, since we immediately return in the main hook
+    // to avoid deleting when we reset the Source
+    delHighlight(hot, row, hot.propToCol(props.Source));
+  }
 }
 
 function setTypeStatus(hot, row, newValue) {
